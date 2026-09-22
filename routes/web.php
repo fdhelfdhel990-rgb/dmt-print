@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\AuthenticatedSessionController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\StorefrontController;
 use Illuminate\Support\Facades\Route;
 
 $categories = ['Merchandise & Souvenir', 'Print Warna', 'Stiker', 'Packaging UMKM', 'Poster', 'Kalender', 'Banner', 'Kartu Nama'];
@@ -14,22 +17,24 @@ $products = [
     ['name' => 'Poster A3+', 'category' => 'Poster', 'price' => 12000, 'unit' => 'lembar', 'tone' => 'orange', 'tag' => ''],
 ];
 
-Route::view('/', 'customer.home', compact('categories', 'products'))->name('home');
-Route::view('/katalog', 'customer.catalog', compact('categories', 'products'))->name('catalog');
-Route::view('/produk/stempel-flash-k3', 'customer.product', compact('categories', 'products'))->name('product.show');
+Route::get('/', [StorefrontController::class, 'home'])->name('home');
+Route::get('/katalog', [StorefrontController::class, 'catalog'])->name('catalog');
+Route::get('/produk/{product}', [StorefrontController::class, 'show'])->name('product.show');
 Route::view('/keranjang', 'customer.cart', compact('categories', 'products'))->name('cart');
 Route::view('/checkout/penerima', 'customer.checkout-recipient', compact('categories', 'products'))->name('checkout.recipient');
 Route::view('/checkout/pembayaran', 'customer.checkout-payment', compact('categories', 'products'))->name('checkout.payment');
 Route::view('/cek-pesanan', 'customer.track', compact('categories', 'products'))->name('orders.track');
 Route::view('/status-pesanan', 'customer.order-status', compact('categories', 'products'))->name('orders.status');
 
-Route::view('/admin', 'admin.login')->name('admin.login');
-Route::prefix('admin-preview')->name('admin.')->group(function () {
+Route::get('/admin', [AuthenticatedSessionController::class, 'create'])->middleware('guest')->name('admin.login');
+Route::post('/admin/login', [AuthenticatedSessionController::class, 'store'])->middleware(['guest', 'throttle:6,1'])->name('admin.login.store');
+Route::prefix('admin-preview')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::view('/', 'admin.dashboard')->name('dashboard');
+    Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::view('/pesanan', 'admin.orders')->name('orders');
     Route::view('/pesanan/DMT-240901-A12B', 'admin.order-detail')->name('orders.show');
-    Route::view('/produk', 'admin.products')->name('products');
-    Route::view('/produk/tambah', 'admin.product-form')->name('products.create');
+    Route::get('/produk', [AdminProductController::class, 'index'])->name('products');
+    Route::get('/produk/tambah', [AdminProductController::class, 'create'])->name('products.create');
     Route::view('/stok', 'admin.stock')->name('stock');
     Route::view('/buku-kas', 'admin.cashbook')->name('cashbook');
     Route::view('/tampilan-web', 'admin.appearance')->name('appearance');

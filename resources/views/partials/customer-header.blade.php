@@ -21,7 +21,7 @@
             <a href="{{ route('home') }}">Beranda</a>
             <a href="{{ route('catalog') }}">Katalog</a>
             @foreach(($categories ?? ['Stiker','Banner','Kartu Nama','Brosur','Merchandise']) as $category)
-                <a href="{{ route('catalog') }}">{{ $category }}</a>
+                <a href="{{ route('catalog', ['category' => is_string($category) ? $category : $category->slug]) }}">{{ is_string($category) ? $category : $category->name }}</a>
             @endforeach
             <a href="{{ route('orders.track') }}" class="mobile-only">Cek Pesanan</a>
         </div>

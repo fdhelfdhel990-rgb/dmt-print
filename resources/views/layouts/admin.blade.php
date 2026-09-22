@@ -17,10 +17,10 @@
                 <a href="{{ route('admin.appearance') }}" class="{{ request()->routeIs('admin.appearance') ? 'active' : '' }}"><span>◫</span>Tampilan Web</a>
                 <a href="{{ route('admin.settings') }}" class="{{ request()->routeIs('admin.settings') ? 'active' : '' }}"><span>⚙</span>Pengaturan</a>
             </nav>
-            <a href="{{ route('admin.login') }}" class="admin-logout">Keluar</a>
+            <form method="POST" action="{{ route('admin.logout') }}">@csrf<button class="admin-logout" type="submit">Keluar</button></form>
         </aside>
         <div class="admin-main">
-            <header class="admin-topbar"><button class="admin-menu-button" type="button" data-admin-menu aria-label="Buka sidebar">☰</button><div><span class="muted">Darul Muttaqien Printing</span></div><div class="admin-user"><span class="admin-avatar">OA</span><div><b>Owner Admin</b><small>Owner</small></div></div></header>
+            <header class="admin-topbar"><button class="admin-menu-button" type="button" data-admin-menu aria-label="Buka sidebar">☰</button><div><span class="muted">Darul Muttaqien Printing</span></div><div class="admin-user"><span class="admin-avatar">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</span><div><b>{{ auth()->user()->name }}</b><small>Admin</small></div></div></header>
             <main class="admin-content">@yield('content')</main>
         </div>
     </div>
