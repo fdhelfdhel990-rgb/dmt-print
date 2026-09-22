@@ -29,9 +29,9 @@ class StorefrontController extends Controller
     {
         abort_unless($product->is_active, 404);
 
-        return view('customer.product', [
+        return view('customer.product-order', [
             'categories' => $this->categories(),
-            'product' => $product->load('category'),
+            'product' => $product->load(['category', 'options' => fn ($query) => $query->where('is_active', true), 'options.values' => fn ($query) => $query->where('is_active', true)]),
         ]);
     }
 

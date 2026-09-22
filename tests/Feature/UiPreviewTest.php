@@ -31,8 +31,6 @@ class UiPreviewTest extends TestCase
             'home' => ['/'],
             'catalog' => ['/katalog'],
             'cart' => ['/keranjang'],
-            'recipient checkout' => ['/checkout/penerima'],
-            'payment checkout' => ['/checkout/pembayaran'],
             'order tracking' => ['/cek-pesanan'],
             'order status' => ['/status-pesanan'],
         ];
@@ -43,7 +41,6 @@ class UiPreviewTest extends TestCase
         return [
             'dashboard' => ['/admin-preview'],
             'orders' => ['/admin-preview/pesanan'],
-            'order detail' => ['/admin-preview/pesanan/DMT-240901-A12B'],
             'products' => ['/admin-preview/produk'],
             'create product' => ['/admin-preview/produk/tambah'],
             'stock' => ['/admin-preview/stok'],

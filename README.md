@@ -56,3 +56,13 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## DMT Print Ordering Workflow
+
+The customer flow is catalogue -> product configuration -> session cart -> guest checkout -> order confirmation. Product prices and option adjustments are always recalculated from the database. Orders preserve product, option, and price snapshots.
+
+Design files accept JPG, JPEG, PNG, PDF, and ZIP by default. They are stored on the private local disk and can only be downloaded through authenticated admin routes. Configure limits with DMT_MAX_UPLOAD_KB and allowed extensions with DMT_ALLOWED_UPLOADS.
+
+Admins can review searchable and filterable orders at /admin-preview/pesanan. Run verification with php artisan test, vendor/bin/pint --format agent, and npm run build.
+
+Final price approval, payment verification, QRIS/bank transfer, stock automation, and cashbook integration are intentionally deferred.

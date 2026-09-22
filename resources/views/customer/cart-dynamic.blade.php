@@ -1,0 +1,11 @@
+@extends('layouts.customer')
+@section('title','Keranjang - DMT Print')
+@section('breadcrumb')<a href="{{ route('home') }}">Beranda</a><span>></span><b>Keranjang</b>@endsection
+@section('content') @include('partials.checkout-steps',['activeStep'=>0])
+<section class="page-section compact-top"><div class="site-container"><h1 class="page-title">Daftar Belanja</h1>
+@if(session('success'))<p>{{ session('success') }}</p>@endif @if($errors->any())<p role="alert">{{ $errors->first() }}</p>@endif
+@if($items->isEmpty())<section class="panel"><h2>Keranjang masih kosong</h2><p>Pilih produk cetak yang Anda perlukan dari katalog.</p><a href="{{ route('catalog') }}" class="button button-primary">Lihat Katalog</a></section>
+@else<div class="cart-table"><div class="cart-head"><span>Produk</span><span>Harga</span><span>Jumlah</span><span>Total</span></div>
+@foreach($items as $item)<div class="cart-row"><div class="cart-product"><form method="POST" action="{{ route('cart.destroy', $item['key']) }}">@csrf @method('DELETE')<button class="remove-item" aria-label="Hapus">x</button></form><span class="cart-thumb"></span><div><b>{{ $item['product']->name }}</b><small>@foreach($item['price']['values'] as $value){{ $value['option_name'] }}: {{ $value['option_value'] }}@if(!$loop->last) | @endif @endforeach</small></div></div><span>Rp {{ number_format($item['price']['unit_estimate'],0,',','.') }}</span><form method="POST" action="{{ route('cart.update',$item['key']) }}" class="qty-control small">@csrf @method('PATCH')<input type="number" name="quantity" min="{{ $item['product']->minimum_order }}" value="{{ $item['quantity'] }}"><button aria-label="Perbarui">OK</button></form><b>Rp {{ number_format($item['price']['subtotal'],0,',','.') }}</b></div>@endforeach</div>
+<div class="cart-summary"><div><span>Total estimasi</span><strong>Rp {{ number_format($subtotal,0,',','.') }}</strong></div><div class="cart-actions"><a href="{{ route('catalog') }}" class="button button-secondary">Lanjutkan Belanja</a><a href="{{ route('checkout.recipient') }}" class="button button-primary">Lanjutkan</a></div></div>@endif</div></section>
+@endsection
