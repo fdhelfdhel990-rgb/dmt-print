@@ -21,7 +21,7 @@
             <a href="<?php echo e(route('home')); ?>">Beranda</a>
             <a href="<?php echo e(route('catalog')); ?>">Katalog</a>
             <?php $__currentLoopData = ($categories ?? ['Stiker','Banner','Kartu Nama','Brosur','Merchandise']); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                <a href="<?php echo e(route('catalog')); ?>"><?php echo e($category); ?></a>
+                <a href="<?php echo e(route('catalog', ['category' => is_string($category) ? $category : $category->slug])); ?>"><?php echo e(is_string($category) ? $category : $category->name); ?></a>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             <a href="<?php echo e(route('orders.track')); ?>" class="mobile-only">Cek Pesanan</a>
         </div>

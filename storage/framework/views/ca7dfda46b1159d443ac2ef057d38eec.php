@@ -1,0 +1,4 @@
+<?php $__env->startSection('title','Pesanan Berhasil - DMT Print'); ?>
+<?php $__env->startSection('content'); ?><section class="page-section"><div class="site-container"><section class="panel"><p class="eyebrow blue">Pesanan diterima</p><h1><?php echo e($order->order_number); ?></h1><p>Admin akan memeriksa detail dan file desain Anda sebelum menetapkan harga final. Pesanan belum dianggap dibayar.</p><p>Simpan kode pesanan ini untuk komunikasi dengan admin.</p><a href="<?php echo e(route('home')); ?>" class="button button-primary">Kembali ke Beranda</a></section></div></section><?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.customer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\WEB\Laravel\print\dmt\resources\views/customer/order-success.blade.php ENDPATH**/ ?>
