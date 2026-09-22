@@ -80,6 +80,77 @@ class OrderingWorkflowTest extends TestCase
         Storage::disk('local')->assertExists($order->items->first()->files->first()->path);
     }
 
+    public function test_complete_http_checkout_flow_is_visible_to_admin(): void
+    {
+        [$product, $option, $value] = $this->productWithOption();
+
+        $this->get(route('product.show', $product))
+            ->assertOk()
+            ->assertSee(route('cart.store', $product), false);
+
+        $this->post(route('cart.store', $product), [
+            'quantity' => 2,
+            'options' => [$option->id => $value->id],
+        ])->assertRedirect(route('cart'));
+
+        $this->get(route('checkout.recipient'))
+            ->assertOk()
+            ->assertSee('method="POST"', false)
+            ->assertSee('name="_token"', false)
+            ->assertSee('type="submit"', false);
+
+        $response = $this->from(route('checkout.recipient'))->post(route('checkout.store'), [
+            'name' => 'Nadia Putri',
+            'phone' => '0812-3456-7890',
+            'email' => 'nadia@example.test',
+            'fulfillment_method' => 'pickup',
+            'approved' => '1',
+        ]);
+
+        $order = Order::query()->with('customer')->firstOrFail();
+        $response->assertRedirect(route('orders.success', ['order' => $order->public_token]));
+        $this->assertDatabaseHas('customers', ['id' => $order->customer_id, 'name' => 'Nadia Putri']);
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'pending_review']);
+        $this->assertDatabaseHas('order_items', ['order_id' => $order->id, 'product_id' => $product->id]);
+        $this->assertDatabaseHas('order_status_histories', ['order_id' => $order->id, 'status' => 'pending_review']);
+        $this->assertEmpty(session('cart', []));
+
+        $admin = User::factory()->create([
+            'email' => 'admin@example.test',
+            'password' => bcrypt('password'),
+            'is_admin' => true,
+        ]);
+        $this->post(route('admin.login.store'), [
+            'email' => $admin->email,
+            'password' => 'password',
+        ])->assertRedirect(route('admin.dashboard'));
+        $this->get(route('admin.orders'))->assertOk()->assertSee($order->order_number);
+        $this->get(route('admin.orders.show', $order))->assertOk()->assertSee($order->order_number);
+    }
+
+    public function test_empty_cart_is_rejected_and_validation_returns_to_checkout(): void
+    {
+        $this->post(route('checkout.store'), [
+            'name' => 'Nadia',
+            'phone' => '0812',
+            'fulfillment_method' => 'pickup',
+            'approved' => '1',
+        ])->assertRedirect(route('cart'));
+
+        $product = Product::factory()->create();
+        $this->post(route('cart.store', $product), ['quantity' => 1]);
+        $this->from(route('checkout.recipient'))->post(route('checkout.store'), [
+            'name' => '',
+            'phone' => '',
+            'fulfillment_method' => 'shipping',
+        ])->assertRedirect(route('checkout.recipient'))->assertSessionHasErrors([
+            'name', 'phone', 'shipping_address', 'shipping_region', 'approved',
+        ]);
+
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertNotEmpty(session('cart', []));
+    }
+
     public function test_shipping_fields_are_required_but_pickup_does_not_require_them(): void
     {
         $product = Product::factory()->create();
@@ -138,12 +209,12 @@ class OrderingWorkflowTest extends TestCase
         $this->post(route('cart.store', $product), ['quantity' => 1]);
         $key = hash('sha256', $product->id.'|[]');
         $before = Order::count();
-        try {
-            $this->post(route('checkout.store'), ['name' => 'Nadia', 'phone' => '0812', 'fulfillment_method' => 'pickup', 'approved' => '1', 'design_files' => [$key => UploadedFile::fake()->create('duplicate.pdf', 10, 'application/pdf')]]);
-        } catch (\Throwable) {
-        }
+        $this->from(route('checkout.recipient'))->post(route('checkout.store'), ['name' => 'Nadia', 'phone' => '0812', 'fulfillment_method' => 'pickup', 'approved' => '1', 'design_files' => [$key => UploadedFile::fake()->create('duplicate.pdf', 10, 'application/pdf')]])
+            ->assertRedirect(route('checkout.recipient'))
+            ->assertSessionHasErrors('checkout');
         $this->assertSame($before, Order::count());
         $this->assertSame([], Storage::disk('local')->allFiles('order-designs'));
+        $this->assertNotEmpty(session('cart', []));
     }
 
     private function productWithOption(): array

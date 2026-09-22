@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Services\CartService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Throwable;
 
 class CheckoutController extends Controller
 {
@@ -25,7 +26,16 @@ class CheckoutController extends Controller
         if ($cart->isEmpty()) {
             return redirect()->route('cart')->withErrors(['cart' => 'Keranjang masih kosong.']);
         }
-        $order = $action->execute($request->safe()->except('design_files'), $request->file('design_files', []));
+        try {
+            $order = $action->execute($request->safe()->except('design_files'), $request->file('design_files', []));
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->withInput()->withErrors([
+                'checkout' => 'Pesanan belum berhasil dibuat. Silakan coba kembali atau hubungi admin jika kendala berlanjut.',
+            ]);
+        }
+
         $cart->clear();
 
         return redirect()->route('orders.success', ['order' => $order->public_token]);
