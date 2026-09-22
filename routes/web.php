@@ -1,9 +1,11 @@
 <?php
 
 use App\Actions\AdjustInventoryAction;
+use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AuthenticatedSessionController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\SiteSettingController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\OrderTrackingController;
@@ -13,6 +15,7 @@ use App\Models\InventoryMovement;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -66,6 +69,10 @@ Route::prefix('admin-preview')->name('admin.')->middleware(['auth', 'admin'])->g
     Route::get('/file-pesanan/{file}/download', [AdminOrderController::class, 'download'])->name('order-files.download');
     Route::get('/produk', [AdminProductController::class, 'index'])->name('products');
     Route::get('/produk/tambah', [AdminProductController::class, 'create'])->name('products.create');
+    Route::post('/produk', [AdminProductController::class, 'store'])->name('products.store');
+    Route::get('/produk/{product}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
+    Route::patch('/produk/{product}', [AdminProductController::class, 'update'])->name('products.update');
+    Route::delete('/produk/{product}', [AdminProductController::class, 'destroy'])->name('products.destroy');
     Route::get('/stok', fn () => view('admin.stock', [
         'products' => Product::query()->withMax('inventoryMovements', 'created_at')->orderBy('name')->get(),
         'lowStockCount' => Product::query()->whereColumn('stock_on_hand', '<=', 'stock_minimum')->count(),
@@ -82,6 +89,14 @@ Route::prefix('admin-preview')->name('admin.')->middleware(['auth', 'admin'])->g
         'cashIn' => CashbookEntry::query()->where('direction', 'in')->whereNull('reversed_at')->sum('amount'),
         'cashOut' => CashbookEntry::query()->where('direction', 'out')->whereNull('reversed_at')->sum('amount'),
     ]))->name('cashbook');
-    Route::view('/tampilan-web', 'admin.appearance')->name('appearance');
-    Route::view('/pengaturan', 'admin.settings')->name('settings');
+    Route::get('/tampilan-web', [SiteSettingController::class, 'edit'])->name('appearance');
+    Route::patch('/tampilan-web/profil', [SiteSettingController::class, 'updateBusiness'])->name('appearance.business');
+    Route::patch('/tampilan-web/banner', [SiteSettingController::class, 'updateHero'])->name('appearance.hero');
+    Route::patch('/tampilan-web/pembayaran', [SiteSettingController::class, 'updatePayment'])->name('appearance.payment');
+    Route::patch('/tampilan-web/sosial', [SiteSettingController::class, 'updateSocial'])->name('appearance.social');
+    Route::patch('/tampilan-web/unggulan', [SiteSettingController::class, 'updateFeatured'])->name('appearance.featured');
+    Route::get('/pengaturan', fn () => view('admin.settings', ['admins' => User::query()->where('is_admin', true)->orderBy('name')->get()]))->name('settings');
+    Route::post('/pengaturan/admin', [AdminUserController::class, 'store'])->name('admins.store');
+    Route::patch('/pengaturan/admin/{user}', [AdminUserController::class, 'update'])->name('admins.update');
+    Route::delete('/pengaturan/admin/{user}', [AdminUserController::class, 'destroy'])->name('admins.destroy');
 });

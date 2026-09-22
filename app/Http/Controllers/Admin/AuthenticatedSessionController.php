@@ -20,12 +20,14 @@ class AuthenticatedSessionController extends Controller
     {
         $credentials = $request->safe()->only(['email', 'password']);
         $credentials['is_admin'] = true;
+        $credentials['is_active'] = true;
 
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()->withErrors(['email' => 'Email atau kata sandi tidak sesuai.'])->onlyInput('email');
         }
 
         $request->session()->regenerate();
+        $request->user()->update(['last_login_at' => now()]);
 
         return redirect()->intended(route('admin.dashboard'));
     }
