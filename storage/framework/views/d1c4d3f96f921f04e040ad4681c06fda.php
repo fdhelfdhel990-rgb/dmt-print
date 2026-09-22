@@ -1,0 +1,7 @@
+<?php $__env->startSection('title','Cek Pesanan - DMT Print'); ?>
+<?php $__env->startSection('breadcrumb'); ?><a href="<?php echo e(route('home')); ?>">Beranda</a><span>›</span><b>Cek Pesanan</b><?php $__env->stopSection(); ?>
+<?php $__env->startSection('content'); ?>
+<section class="track-page"><div class="track-illustration"><span class="track-doc"></span><span class="track-box"></span></div><div class="track-card"><p class="eyebrow blue">Pantau pesanan</p><h1>Cek status pesanan Anda</h1><p>Masukkan kode pesanan dan nomor WhatsApp yang digunakan saat memesan.</p><form action="<?php echo e(route('orders.status')); ?>"><div class="form-group"><label>Kode pesanan</label><input placeholder="Contoh: DMT-240901-A12B"></div><div class="form-group"><label>Nomor WhatsApp</label><input placeholder="Contoh: 081234567890"></div><button class="button button-primary button-block">Cek Status Pesanan</button></form><small>Kode pesanan tersedia pada halaman berhasil setelah Anda mengirim pesanan.</small></div></section>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.customer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\WEB\Laravel\print\dmt\resources\views/customer/track.blade.php ENDPATH**/ ?>

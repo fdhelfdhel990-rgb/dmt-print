@@ -1,0 +1,4 @@
+<div class="checkout-steps site-container">
+    <?php $__currentLoopData = ['Keranjang','Penerima','Pengiriman','Pembayaran','Selesai']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i=>$step): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><div class="checkout-step <?php echo e($i <= ($activeStep ?? 0) ? 'active' : ''); ?>"><span><?php echo e($i+1); ?></span><small><?php echo e($step); ?></small></div><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+</div>
+<?php /**PATH D:\WEB\Laravel\print\dmt\resources\views/partials/checkout-steps.blade.php ENDPATH**/ ?>

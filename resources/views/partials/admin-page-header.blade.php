@@ -1,0 +1,1 @@
+<div class="admin-page-header"><div><p class="admin-eyebrow">@yield('section-label','Operasional')</p><h1>@yield('page-title')</h1><p>@yield('page-description')</p></div>@hasSection('page-action')<div>@yield('page-action')</div>@endif</div>
