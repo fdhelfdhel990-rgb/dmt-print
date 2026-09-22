@@ -31,6 +31,8 @@ class ProductFactory extends Factory
             'base_price' => fake()->numberBetween(5000, 500000),
             'unit' => fake()->randomElement(['pcs', 'lembar', 'box', 'set']),
             'minimum_order' => 1,
+            'stock_on_hand' => 100,
+            'stock_minimum' => 5,
             'production_estimate' => '1-2 hari',
             'tone' => fake()->randomElement(['blue', 'cyan', 'navy', 'yellow']),
             'tag' => null,

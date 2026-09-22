@@ -1,6 +1,112 @@
 @extends('layouts.customer')
+
 @section('title','Status Pesanan - DMT Print')
-@section('breadcrumb')<a href="{{ route('home') }}">Beranda</a><span>›</span><a href="{{ route('orders.track') }}">Cek Pesanan</a><span>›</span><b>DMT-240901-A12B</b>@endsection
+
+@section('breadcrumb')
+<a href="{{ route('home') }}">Beranda</a><span>›</span><a href="{{ route('orders.track') }}">Cek Pesanan</a><span>›</span><b>{{ $order->order_number }}</b>
+@endsection
+
 @section('content')
-<section class="page-section"><div class="site-container order-status-grid"><div><div class="status-header"><div><p class="eyebrow blue">DMT-240901-A12B</p><h1>Pesanan sedang diproduksi</h1><p>Diperbarui 22 September 2026, 14.35 WIB</p></div><span class="status-badge production">Dalam Produksi</span></div><section class="panel"><h2>Perjalanan Pesanan</h2><div class="order-timeline"><div class="done"><span>✓</span><div><b>Pesanan diterima</b><small>21 Sep 2026 • 09.20</small></div></div><div class="done"><span>✓</span><div><b>Harga dikonfirmasi</b><small>21 Sep 2026 • 10.15</small></div></div><div class="done"><span>✓</span><div><b>DP diterima</b><small>21 Sep 2026 • 12.05</small></div></div><div class="current"><span>4</span><div><b>Dalam produksi</b><small>Estimasi selesai 23 Sep 2026</small></div></div><div><span>5</span><div><b>Siap diserahkan</b><small>Menunggu proses sebelumnya</small></div></div></div></section></div><aside><section class="panel"><h2>Ringkasan Pesanan</h2><div class="summary-product"><span class="summary-thumb"></span><div><b>Stempel Flash K3</b><small>Hitam • 1 pcs</small></div></div><div class="summary-line"><span>Total pesanan</span><b>Rp 190.000</b></div><div class="summary-line"><span>Sudah dibayar</span><b>Rp 95.000</b></div><div class="summary-line total"><span>Sisa pembayaran</span><b>Rp 95.000</b></div><button class="button button-primary button-block">Bayar Pelunasan</button></section><section class="panel help-panel"><h3>Butuh bantuan?</h3><p>Hubungi admin dan sertakan kode pesanan.</p><a href="#">Chat WhatsApp</a></section></aside></div></section>
+@php
+    $remaining = max(0, (int) $order->final_total - (int) $order->amount_paid);
+@endphp
+<section class="page-section">
+    <div class="site-container order-status-grid">
+        <div>
+            <div class="status-header">
+                <div>
+                    <p class="eyebrow blue">{{ $order->order_number }}</p>
+                    <h1>{{ str($order->status)->replace('_',' ')->title() }}</h1>
+                    <p>Diperbarui {{ $order->updated_at->format('d M Y, H.i') }}</p>
+                </div>
+                <span class="status-badge production">{{ str($order->status)->replace('_',' ')->title() }}</span>
+            </div>
+
+            @if(session('status'))
+                <section class="panel">{{ session('status') }}</section>
+            @endif
+
+            <section class="panel">
+                <h2>Perjalanan Pesanan</h2>
+                <div class="order-timeline">
+                    @foreach($order->statusHistories as $history)
+                        <div class="{{ $loop->last ? 'current' : 'done' }}">
+                            <span>{{ $loop->last ? $loop->iteration : '✓' }}</span>
+                            <div>
+                                <b>{{ str($history->status)->replace('_',' ')->title() }}</b>
+                                <small>{{ $history->created_at->format('d M Y, H.i') }}</small>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+
+            @if($order->status === 'waiting_customer_approval')
+                <section class="panel">
+                    <h2>Konfirmasi Harga</h2>
+                    <form method="POST" action="{{ route('orders.approve',$order) }}">
+                        @csrf
+                        <div class="form-group">
+                            <label>Skema pembayaran</label>
+                            <select name="payment_scheme">
+                                <option value="down_payment">DP 50%</option>
+                                <option value="full">Pembayaran penuh</option>
+                            </select>
+                        </div>
+                        <button class="button button-primary">Setujui Harga</button>
+                    </form>
+                    <form method="POST" action="{{ route('orders.revise',$order) }}">
+                        @csrf
+                        <div class="form-group">
+                            <label>Catatan revisi</label>
+                            <textarea name="revision_note"></textarea>
+                        </div>
+                        <button class="button button-secondary">Minta Revisi</button>
+                    </form>
+                </section>
+            @endif
+
+            @if($remaining > 0 && in_array($order->status, ['waiting_payment', 'paid'], true))
+                <section class="panel">
+                    <h2>Pembayaran</h2>
+                    <form method="POST" action="{{ route('orders.payment',$order) }}" enctype="multipart/form-data">
+                        @csrf
+                        <div class="form-group">
+                            <label>Metode</label>
+                            <select name="method">
+                                <option value="qris">QRIS</option>
+                                <option value="bank_transfer">Transfer bank</option>
+                                <option value="cash">Bayar langsung</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Jenis</label>
+                            <select name="payment_type">
+                                <option value="{{ $order->amount_paid > 0 ? 'settlement' : 'down_payment' }}">{{ $order->amount_paid > 0 ? 'Pelunasan' : 'DP 50%' }}</option>
+                                <option value="full">Pembayaran penuh</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Bukti pembayaran</label>
+                            <input type="file" name="proof">
+                        </div>
+                        <button class="button button-primary">Kirim Pembayaran</button>
+                    </form>
+                </section>
+            @endif
+        </div>
+        <aside>
+            <section class="panel">
+                <h2>Ringkasan Pesanan</h2>
+                @foreach($order->items as $item)
+                    <div class="summary-product"><span class="summary-thumb"></span><div><b>{{ $item->product_name }}</b><small>{{ $item->quantity }} {{ $item->unit }}</small></div></div>
+                @endforeach
+                <div class="summary-line"><span>Total pesanan</span><b>{{ $order->final_total === null ? 'Menunggu admin' : 'Rp '.number_format($order->final_total,0,',','.') }}</b></div>
+                <div class="summary-line"><span>Sudah dibayar</span><b>Rp {{ number_format($order->amount_paid,0,',','.') }}</b></div>
+                <div class="summary-line total"><span>Sisa pembayaran</span><b>Rp {{ number_format($remaining,0,',','.') }}</b></div>
+            </section>
+            <section class="panel help-panel"><h3>Butuh bantuan?</h3><p>Hubungi admin dan sertakan kode pesanan.</p><a href="#">Chat WhatsApp</a></section>
+        </aside>
+    </div>
+</section>
 @endsection

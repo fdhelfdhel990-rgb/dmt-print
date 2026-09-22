@@ -1,11 +1,19 @@
 <?php
 
+use App\Actions\AdjustInventoryAction;
 use App\Http\Controllers\Admin\AuthenticatedSessionController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\OrderTrackingController;
 use App\Http\Controllers\StorefrontController;
+use App\Models\CashbookEntry;
+use App\Models\InventoryMovement;
+use App\Models\Order;
+use App\Models\Payment;
+use App\Models\Product;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 $categories = ['Merchandise & Souvenir', 'Print Warna', 'Stiker', 'Packaging UMKM', 'Poster', 'Kalender', 'Banner', 'Kartu Nama'];
@@ -31,21 +39,49 @@ Route::delete('/keranjang', [CartController::class, 'clear'])->name('cart.clear'
 Route::get('/checkout/penerima', [CheckoutController::class, 'create'])->name('checkout.recipient');
 Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:10,1')->name('checkout.store');
 Route::get('/pesanan/selesai/{order:public_token}', [CheckoutController::class, 'success'])->name('orders.success');
-Route::view('/cek-pesanan', 'customer.track', compact('categories', 'products'))->name('orders.track');
-Route::view('/status-pesanan', 'customer.order-status', compact('categories', 'products'))->name('orders.status');
+Route::get('/cek-pesanan', [OrderTrackingController::class, 'create'])->name('orders.track');
+Route::get('/status-pesanan', [OrderTrackingController::class, 'show'])->name('orders.status');
+Route::post('/pesanan/{order}/setujui', [OrderTrackingController::class, 'approve'])->name('orders.approve');
+Route::post('/pesanan/{order}/revisi', [OrderTrackingController::class, 'revise'])->name('orders.revise');
+Route::post('/pesanan/{order}/pembayaran', [OrderTrackingController::class, 'payment'])->name('orders.payment');
 
 Route::get('/admin', [AuthenticatedSessionController::class, 'create'])->middleware('guest')->name('admin.login');
 Route::post('/admin/login', [AuthenticatedSessionController::class, 'store'])->middleware(['guest', 'throttle:6,1'])->name('admin.login.store');
 Route::prefix('admin-preview')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
-    Route::view('/', 'admin.dashboard')->name('dashboard');
+    Route::get('/', fn () => view('admin.dashboard', [
+        'newOrdersCount' => Order::query()->where('status', 'pending_review')->count(),
+        'pendingPaymentsCount' => Payment::query()->where('status', 'pending')->count(),
+        'productionCount' => Order::query()->where('status', 'production')->count(),
+        'lowStockCount' => Product::query()->whereColumn('stock_on_hand', '<=', 'stock_minimum')->count(),
+        'recentOrders' => Order::query()->with('customer', 'items')->latest()->limit(5)->get(),
+    ]))->name('dashboard');
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('/pesanan', [AdminOrderController::class, 'index'])->name('orders');
     Route::get('/pesanan/{order?}', [AdminOrderController::class, 'show'])->name('orders.show');
+    Route::post('/pesanan/{order}/harga', [AdminOrderController::class, 'price'])->name('orders.price');
+    Route::post('/pesanan/{order}/produksi', [AdminOrderController::class, 'production'])->name('orders.production');
+    Route::post('/pembayaran/{payment}/verifikasi', [AdminOrderController::class, 'verifyPayment'])->name('payments.verify');
+    Route::post('/pembayaran/{payment}/tolak', [AdminOrderController::class, 'rejectPayment'])->name('payments.reject');
+    Route::post('/pembayaran/{payment}/batalkan-verifikasi', [AdminOrderController::class, 'cancelPaymentVerification'])->name('payments.cancel-verification');
     Route::get('/file-pesanan/{file}/download', [AdminOrderController::class, 'download'])->name('order-files.download');
     Route::get('/produk', [AdminProductController::class, 'index'])->name('products');
     Route::get('/produk/tambah', [AdminProductController::class, 'create'])->name('products.create');
-    Route::view('/stok', 'admin.stock')->name('stock');
-    Route::view('/buku-kas', 'admin.cashbook')->name('cashbook');
+    Route::get('/stok', fn () => view('admin.stock', [
+        'products' => Product::query()->withMax('inventoryMovements', 'created_at')->orderBy('name')->get(),
+        'lowStockCount' => Product::query()->whereColumn('stock_on_hand', '<=', 'stock_minimum')->count(),
+        'movements' => InventoryMovement::query()->with('product')->latest()->limit(10)->get(),
+    ]))->name('stock');
+    Route::post('/stok/{product}/mutasi', function (Request $request, Product $product) {
+        $validated = $request->validate(['quantity' => ['required', 'integer', 'not_in:0'], 'note' => ['nullable', 'string', 'max:1000']]);
+        app(AdjustInventoryAction::class)->execute($product, (int) $validated['quantity'], (int) $validated['quantity'] > 0 ? 'manual_in' : 'manual_out', 'manual:'.uniqid('', true), $request->user(), $validated['note'] ?? null);
+
+        return back()->with('status', 'Mutasi stok disimpan.');
+    })->name('stock.adjust');
+    Route::get('/buku-kas', fn () => view('admin.cashbook', [
+        'entries' => CashbookEntry::query()->latest()->paginate(20),
+        'cashIn' => CashbookEntry::query()->where('direction', 'in')->whereNull('reversed_at')->sum('amount'),
+        'cashOut' => CashbookEntry::query()->where('direction', 'out')->whereNull('reversed_at')->sum('amount'),
+    ]))->name('cashbook');
     Route::view('/tampilan-web', 'admin.appearance')->name('appearance');
     Route::view('/pengaturan', 'admin.settings')->name('settings');
 });
