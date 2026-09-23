@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\UploadDisk;
 use Database\Factories\OrderItemFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -43,7 +44,7 @@ class OrderItem extends Model
 
     public function imageDisk(): string
     {
-        return $this->product_image_disk ?: 'public';
+        return UploadDisk::resolve($this->product_image_disk, UploadDisk::public());
     }
 
     public function imagePath(): ?string

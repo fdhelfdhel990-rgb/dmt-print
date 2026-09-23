@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Services\CartService;
 use App\Services\OrderNumberGenerator;
+use App\Support\UploadDisk;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -53,9 +54,10 @@ class CreateOrderAction
                     }
                     $file = $files[$cartItem['key']] ?? null;
                     if ($file instanceof UploadedFile) {
-                        $path = $file->store('order-designs/'.$order->public_token, 'local');
-                        $stored[] = $path;
-                        $item->files()->create(['disk' => 'local', 'path' => $path, 'original_name' => $file->getClientOriginalName(), 'mime_type' => $file->getMimeType() ?: 'application/octet-stream', 'size' => $file->getSize()]);
+                        $disk = UploadDisk::private();
+                        $path = $file->store('order-designs/'.$order->public_token, $disk);
+                        $stored[] = ['disk' => $disk, 'path' => $path];
+                        $item->files()->create(['disk' => $disk, 'path' => $path, 'original_name' => $file->getClientOriginalName(), 'mime_type' => $file->getMimeType() ?: 'application/octet-stream', 'size' => $file->getSize()]);
                     }
                 }
                 $order->statusHistories()->create(['status' => 'pending_review', 'note' => 'Pesanan dibuat oleh pelanggan.']);
@@ -63,8 +65,8 @@ class CreateOrderAction
                 return $order->load('customer', 'items.options', 'items.files', 'statusHistories');
             });
         } catch (Throwable $exception) {
-            foreach ($stored as $path) {
-                Storage::disk('local')->delete($path);
+            foreach ($stored as $file) {
+                Storage::disk($file['disk'])->delete($file['path']);
             }
             throw $exception;
         }

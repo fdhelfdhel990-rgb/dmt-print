@@ -7,7 +7,7 @@
     'loading' => 'lazy',
 ])
 @php
-    $imageDisk = $disk ?: ($model instanceof \App\Models\OrderItem ? $model->imageDisk() : 'public');
+    $imageDisk = \App\Support\UploadDisk::resolve($disk ?: ($model instanceof \App\Models\OrderItem ? $model->imageDisk() : null), \App\Support\UploadDisk::public());
     $imagePath = $path ?: ($model instanceof \App\Models\OrderItem ? $model->imagePath() : ($model->image_path ?? null));
     $src = asset('images/placeholders/product.svg');
 

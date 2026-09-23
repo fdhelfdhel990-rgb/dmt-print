@@ -22,7 +22,7 @@ class OrderManagementWorkflowTest extends TestCase
 
     public function test_stage_three_order_payment_inventory_cashbook_and_tracking_workflow(): void
     {
-        Storage::fake('local');
+        Storage::fake('private_uploads');
         $admin = User::factory()->create(['is_admin' => true]);
         $product = Product::factory()->create(['base_price' => 100000, 'stock_on_hand' => 10, 'stock_minimum' => 2]);
         $order = Order::factory()->create(['estimated_subtotal' => 200000, 'estimated_total' => 200000]);
@@ -39,7 +39,7 @@ class OrderManagementWorkflowTest extends TestCase
 
         $this->post(route('orders.approve', $order), ['payment_scheme' => 'down_payment'])->assertRedirect();
         $payment = app(RecordPaymentAction::class)->execute($order->refresh(), 'qris', 'down_payment', 120000, UploadedFile::fake()->create('bukti.pdf', 20, 'application/pdf'));
-        Storage::disk('local')->assertExists($payment->proof_path);
+        Storage::disk('private_uploads')->assertExists($payment->proof_path);
 
         app(VerifyPaymentAction::class)->verify($payment, $admin);
         app(VerifyPaymentAction::class)->verify($payment, $admin);

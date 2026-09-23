@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Support\UploadDisk;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,7 +28,7 @@ class CategoryController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
-        $data['image_path'] = $request->file('image')?->store('categories', 'public');
+        $data['image_path'] = $request->file('image')?->store('categories', UploadDisk::public());
         Category::create($data);
 
         return redirect()->route('admin.categories')->with('status', 'Kategori berhasil dibuat.');
@@ -48,13 +49,13 @@ class CategoryController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            $data['image_path'] = $request->file('image')->store('categories', 'public');
+            $data['image_path'] = $request->file('image')->store('categories', UploadDisk::public());
         }
 
         $category->update($data);
 
         if (($request->hasFile('image') || $request->boolean('remove_image')) && $oldPath) {
-            Storage::disk('public')->delete($oldPath);
+            Storage::disk(UploadDisk::public())->delete($oldPath);
         }
 
         return back()->with('status', 'Kategori berhasil diperbarui.');

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\UploadDisk;
 use Database\Factories\BannerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,7 +17,7 @@ class Banner extends Model
 
     public function imageUrl(): ?string
     {
-        return $this->image_path ? Storage::disk('public')->url($this->image_path) : null;
+        return $this->image_path ? Storage::disk(UploadDisk::public())->url($this->image_path) : null;
     }
 
     protected function casts(): array

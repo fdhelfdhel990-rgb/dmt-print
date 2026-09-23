@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Banner;
+use App\Support\UploadDisk;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -13,7 +14,7 @@ class BannerController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
-        $data['image_path'] = $request->file('image')?->store('banners', 'public');
+        $data['image_path'] = $request->file('image')?->store('banners', UploadDisk::public());
         Banner::create($data);
 
         return back()->with('status', 'Banner berhasil ditambahkan.');
@@ -29,13 +30,13 @@ class BannerController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            $data['image_path'] = $request->file('image')->store('banners', 'public');
+            $data['image_path'] = $request->file('image')->store('banners', UploadDisk::public());
         }
 
         $banner->update($data);
 
         if (($request->hasFile('image') || $request->boolean('remove_image')) && $oldPath) {
-            Storage::disk('public')->delete($oldPath);
+            Storage::disk(UploadDisk::public())->delete($oldPath);
         }
 
         return back()->with('status', 'Banner berhasil diperbarui.');

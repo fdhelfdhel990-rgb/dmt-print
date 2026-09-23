@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\UploadDisk;
 use Database\Factories\PaymentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -34,7 +35,7 @@ class Payment extends Model
 
     public function proofExists(): bool
     {
-        return $this->hasProofFile() && Storage::disk($this->proof_disk)->exists($this->proof_path);
+        return $this->hasProofFile() && Storage::disk(UploadDisk::resolve($this->proof_disk, UploadDisk::private()))->exists($this->proof_path);
     }
 
     public function safeProofDownloadName(): string

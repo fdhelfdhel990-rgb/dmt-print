@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\UploadDisk;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -43,11 +44,13 @@ class Product extends Model
 
     public function imageUrl(): ?string
     {
-        if (! filled($this->image_path) || ! Storage::disk('public')->exists($this->image_path)) {
+        $disk = UploadDisk::public();
+
+        if (! filled($this->image_path) || ! Storage::disk($disk)->exists($this->image_path)) {
             return asset('images/placeholders/product.svg');
         }
 
-        return Storage::disk('public')->url($this->image_path);
+        return Storage::disk($disk)->url($this->image_path);
     }
 
     protected function casts(): array

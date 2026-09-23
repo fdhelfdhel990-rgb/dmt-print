@@ -17,7 +17,7 @@ class StageFourAdminCmsTest extends TestCase
 
     public function test_admin_can_manage_catalog_cms_and_admin_users(): void
     {
-        Storage::fake('public');
+        Storage::fake('public_uploads');
         $admin = User::factory()->create(['is_admin' => true, 'is_active' => true, 'role' => 'owner']);
         $category = Category::factory()->create(['name' => 'Stiker']);
 

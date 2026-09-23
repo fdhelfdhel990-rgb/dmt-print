@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Models\ProductOption;
 use App\Models\ProductOptionValue;
 use App\Models\User;
+use App\Support\UploadDisk;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -24,8 +25,8 @@ class ProductMediaPaymentInvoiceTest extends TestCase
 
     public function test_uploaded_product_image_renders_across_customer_pages_and_order_snapshot(): void
     {
-        Storage::fake('public');
-        Storage::disk('public')->put('products/stiker.jpg', 'image-content');
+        Storage::fake('public_uploads');
+        Storage::disk('public_uploads')->put('products/stiker.jpg', 'image-content');
         $category = Category::factory()->create(['name' => 'Stiker', 'slug' => 'stiker']);
         $product = Product::factory()->for($category)->create(['name' => 'Stiker Foto', 'slug' => 'stiker-foto', 'image_path' => 'products/stiker.jpg', 'base_price' => 25000]);
 
@@ -40,7 +41,7 @@ class ProductMediaPaymentInvoiceTest extends TestCase
 
         $order = Order::query()->with('items')->firstOrFail();
         $this->assertDatabaseHas('order_items', ['order_id' => $order->id, 'product_image_disk' => 'public', 'product_image_path' => 'products/stiker.jpg']);
-        Storage::disk('public')->put('products/pengganti.jpg', 'new-image-content');
+        Storage::disk('public_uploads')->put('products/pengganti.jpg', 'new-image-content');
         $product->update(['is_active' => false, 'image_path' => 'products/pengganti.jpg']);
 
         $this->get(route('orders.success', ['order' => $order->public_token]))->assertOk()->assertSee('/storage/products/stiker.jpg', false);
@@ -50,9 +51,36 @@ class ProductMediaPaymentInvoiceTest extends TestCase
         $this->actingAs($admin)->get(route('admin.orders.show', $order))->assertOk()->assertSee('/storage/products/stiker.jpg', false);
     }
 
+    public function test_upload_disks_are_configured_for_local_development_and_r2_production(): void
+    {
+        $this->assertSame('public_uploads', UploadDisk::public());
+        $this->assertSame('private_uploads', UploadDisk::private());
+        $this->assertSame('local', config('filesystems.disks.public_uploads.driver'));
+        $this->assertSame('local', config('filesystems.disks.private_uploads.driver'));
+        $this->assertSame('/storage/products/sample.jpg', parse_url(Storage::disk(UploadDisk::public())->url('products/sample.jpg'), PHP_URL_PATH));
+
+        config([
+            'filesystems.disks.public_uploads.driver' => 's3',
+            'filesystems.disks.public_uploads.bucket' => 'dmt-print-public',
+            'filesystems.disks.public_uploads.root' => '',
+            'filesystems.disks.public_uploads.url' => 'https://cdn.example.test',
+            'filesystems.disks.private_uploads.driver' => 's3',
+            'filesystems.disks.private_uploads.bucket' => 'dmt-print',
+            'filesystems.disks.private_uploads.root' => '',
+            'filesystems.disks.private_uploads.url' => null,
+        ]);
+        Storage::forgetDisk('public_uploads');
+        Storage::forgetDisk('private_uploads');
+
+        $this->assertSame('https://cdn.example.test/products/sample.jpg', Storage::disk(UploadDisk::public())->url('products/sample.jpg'));
+        $this->assertSame('dmt-print-public', config('filesystems.disks.public_uploads.bucket'));
+        $this->assertSame('dmt-print', config('filesystems.disks.private_uploads.bucket'));
+        $this->assertNull(config('filesystems.disks.private_uploads.url'));
+    }
+
     public function test_missing_product_image_uses_local_placeholder(): void
     {
-        Storage::fake('public');
+        Storage::fake('public_uploads');
         $product = Product::factory()->create(['image_path' => 'products/missing.jpg']);
 
         $this->get(route('product.show', $product))->assertOk()->assertSee('images/placeholders/product.svg', false);
@@ -60,11 +88,11 @@ class ProductMediaPaymentInvoiceTest extends TestCase
 
     public function test_replacing_product_image_deletes_old_file_safely(): void
     {
-        Storage::fake('public');
+        Storage::fake('public_uploads');
         $admin = User::factory()->create(['is_admin' => true, 'is_active' => true]);
         $category = Category::factory()->create();
         $product = Product::factory()->for($category)->create(['image_path' => 'products/old.jpg']);
-        Storage::disk('public')->put('products/old.jpg', 'old');
+        Storage::disk('public_uploads')->put('products/old.jpg', 'old');
 
         $this->actingAs($admin)->patch(route('admin.products.update', $product), [
             'category_id' => $category->id,
@@ -82,17 +110,19 @@ class ProductMediaPaymentInvoiceTest extends TestCase
             'image' => UploadedFile::fake()->create('new.jpg', 12, 'image/jpeg'),
         ])->assertRedirect();
 
-        Storage::disk('public')->assertMissing('products/old.jpg');
-        Storage::disk('public')->assertExists($product->refresh()->image_path);
+        Storage::disk('public_uploads')->assertMissing('products/old.jpg');
+        Storage::disk('public_uploads')->assertExists($product->refresh()->image_path);
     }
 
     public function test_admin_can_download_private_payment_proof_and_access_is_protected(): void
     {
-        Storage::fake('local');
+        Storage::fake('private_uploads');
         $order = Order::factory()->create();
         $payment = app(RecordPaymentAction::class)->execute($order, 'qris', 'full', 50000, UploadedFile::fake()->create('Bukti Bayar.JPG', 16, 'image/jpeg'));
         $admin = User::factory()->create(['is_admin' => true, 'is_active' => true]);
 
+        $this->assertSame('private_uploads', $payment->proof_disk);
+        $this->assertStringStartsWith('payment-proofs/', $payment->proof_path);
         $this->get(route('admin.payments.proof.download', $payment))->assertRedirect(route('admin.login'));
         $inactiveAdmin = User::factory()->create(['is_admin' => true, 'is_active' => false]);
         $this->actingAs($inactiveAdmin)->get(route('admin.payments.proof.download', $payment))->assertForbidden();
@@ -104,9 +134,27 @@ class ProductMediaPaymentInvoiceTest extends TestCase
         $this->actingAs($admin)->get(route('admin.payments.proof.preview', $payment))->assertOk();
     }
 
+    public function test_legacy_local_private_payment_proof_disk_metadata_still_downloads_from_private_uploads(): void
+    {
+        Storage::fake('private_uploads');
+        Storage::disk('private_uploads')->put('payment-proofs/legacy/proof.jpg', 'proof');
+        $admin = User::factory()->create(['is_admin' => true, 'is_active' => true]);
+        $payment = Payment::factory()->create([
+            'proof_disk' => 'local',
+            'proof_path' => 'payment-proofs/legacy/proof.jpg',
+            'proof_original_name' => 'legacy-proof.jpg',
+            'proof_mime_type' => 'image/jpeg',
+            'proof_size' => 5,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.payments.proof.download', $payment));
+
+        $response->assertDownload('legacy-proof.jpg');
+    }
+
     public function test_payment_proof_download_rejects_missing_or_public_files(): void
     {
-        Storage::fake('local');
+        Storage::fake('private_uploads');
         $admin = User::factory()->create(['is_admin' => true, 'is_active' => true]);
         $withoutFile = Payment::factory()->create();
         $missingFile = Payment::factory()->create(['proof_disk' => 'local', 'proof_path' => 'payment-proofs/missing.jpg', 'proof_original_name' => 'missing.jpg']);
@@ -119,8 +167,8 @@ class ProductMediaPaymentInvoiceTest extends TestCase
 
     public function test_invoice_displays_snapshots_totals_and_no_internal_notes_or_selects(): void
     {
-        Storage::fake('public');
-        Storage::disk('public')->put('products/invoice.jpg', 'image-content');
+        Storage::fake('public_uploads');
+        Storage::disk('public_uploads')->put('products/invoice.jpg', 'image-content');
         $admin = User::factory()->create(['is_admin' => true, 'is_active' => true]);
         $otherOrder = Order::factory()->create(['order_number' => 'DMT-OTHER']);
         $order = Order::factory()->create(['order_number' => 'DMT-260923-AB12', 'final_total' => 120000, 'estimated_subtotal' => 100000, 'estimated_total' => 120000, 'shipping_cost' => 20000, 'amount_paid' => 60000, 'internal_note' => 'Catatan rahasia admin', 'customer_note' => 'Tolong cepat']);
@@ -147,8 +195,8 @@ class ProductMediaPaymentInvoiceTest extends TestCase
 
     public function test_order_pages_show_option_snapshot_without_reconfiguration_and_payment_ignores_fake_options(): void
     {
-        Storage::fake('public');
-        Storage::disk('public')->put('payment-methods/qris.png', 'qris');
+        Storage::fake('public_uploads');
+        Storage::disk('public_uploads')->put('payment-methods/qris.png', 'qris');
         $product = Product::factory()->create(['base_price' => 100000]);
         $option = ProductOption::create(['product_id' => $product->id, 'name' => 'Ukuran', 'is_required' => true, 'is_active' => true]);
         $value = ProductOptionValue::create(['product_option_id' => $option->id, 'name' => 'A3', 'price_adjustment' => 20000, 'is_active' => true]);

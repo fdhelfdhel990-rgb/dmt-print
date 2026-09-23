@@ -87,8 +87,8 @@ class OrderingWorkflowTest extends TestCase
 
     public function test_cart_uses_product_image_or_placeholder_without_reconfiguring_options(): void
     {
-        Storage::fake('public');
-        Storage::disk('public')->put('products/cart-image.jpg', 'fake-image');
+        Storage::fake('public_uploads');
+        Storage::disk('public_uploads')->put('products/cart-image.jpg', 'fake-image');
         $product = Product::factory()->create(['image_path' => 'products/cart-image.jpg']);
         $size = ProductOption::create(['product_id' => $product->id, 'name' => 'Ukuran', 'is_required' => true, 'is_active' => true]);
         $a3 = ProductOptionValue::create(['product_option_id' => $size->id, 'name' => 'A3', 'price_adjustment' => 20000, 'is_active' => true]);
@@ -142,7 +142,7 @@ class OrderingWorkflowTest extends TestCase
 
     public function test_guest_checkout_creates_snapshots_history_upload_and_clears_cart(): void
     {
-        Storage::fake('local');
+        Storage::fake('private_uploads');
         $product = Product::factory()->create(['name' => 'Poster Uji', 'base_price' => 50000]);
         $this->post(route('cart.store', $product), ['quantity' => 2]);
         $key = hash('sha256', $product->id.'|[]');
@@ -159,7 +159,7 @@ class OrderingWorkflowTest extends TestCase
         $this->assertSame(100000, $order->estimated_total);
         $this->assertDatabaseHas('order_status_histories', ['order_id' => $order->id, 'status' => 'pending_review']);
         $this->assertEmpty(session('cart', []));
-        Storage::disk('local')->assertExists($order->items->first()->files->first()->path);
+        Storage::disk('private_uploads')->assertExists($order->items->first()->files->first()->path);
     }
 
     public function test_complete_http_checkout_flow_is_visible_to_admin(): void
@@ -212,7 +212,7 @@ class OrderingWorkflowTest extends TestCase
 
     public function test_customer_payment_methods_only_show_available_backend_amounts(): void
     {
-        Storage::fake('public');
+        Storage::fake('public_uploads');
         $order = Order::factory()->create(['status' => 'waiting_payment', 'final_total' => 120000, 'amount_paid' => 0]);
         $order->statusHistories()->create(['status' => 'waiting_payment']);
         $order->items()->create(['product_id' => Product::factory()->create()->id, 'product_name' => 'Poster', 'quantity' => 1, 'unit' => 'pcs', 'base_price' => 120000, 'unit_estimate' => 120000, 'subtotal' => 120000]);
@@ -274,7 +274,7 @@ class OrderingWorkflowTest extends TestCase
 
     public function test_order_files_and_admin_orders_require_admin_access(): void
     {
-        Storage::fake('local');
+        Storage::fake('private_uploads');
         $product = Product::factory()->create();
         $this->post(route('cart.store', $product), ['quantity' => 1]);
         $key = hash('sha256', $product->id.'|[]');
@@ -311,7 +311,7 @@ class OrderingWorkflowTest extends TestCase
 
     public function test_transaction_rolls_back_and_removes_uploaded_file_on_metadata_failure(): void
     {
-        Storage::fake('local');
+        Storage::fake('private_uploads');
         Schema::table('order_files', fn (Blueprint $table) => $table->unique('original_name'));
         $existingOrder = Order::factory()->create();
         $existingItem = OrderItem::factory()->for($existingOrder)->create();
@@ -324,7 +324,7 @@ class OrderingWorkflowTest extends TestCase
             ->assertRedirect(route('checkout.recipient'))
             ->assertSessionHasErrors('checkout');
         $this->assertSame($before, Order::count());
-        $this->assertSame([], Storage::disk('local')->allFiles('order-designs'));
+        $this->assertSame([], Storage::disk('private_uploads')->allFiles('order-designs'));
         $this->assertNotEmpty(session('cart', []));
     }
 

@@ -7,6 +7,7 @@ use App\Models\Banner;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\SiteSetting;
+use App\Support\UploadDisk;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -64,13 +65,13 @@ class SiteSettingController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            $validated['image_path'] = $request->file('image')->store('payment-methods', 'public');
+            $validated['image_path'] = $request->file('image')->store('payment-methods', UploadDisk::public());
         }
 
         $method->fill($validated)->save();
 
         if (($request->hasFile('image') || $request->boolean('remove_image')) && $oldPath) {
-            Storage::disk('public')->delete($oldPath);
+            Storage::disk(UploadDisk::public())->delete($oldPath);
         }
 
         return back()->with('status', 'Informasi pembayaran disimpan.');

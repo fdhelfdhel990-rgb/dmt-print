@@ -23,7 +23,7 @@ class RevisionMediaCashbookArchiveTest extends TestCase
 
     public function test_banner_upload_replacement_and_visibility(): void
     {
-        Storage::fake('public');
+        Storage::fake('public_uploads');
         $admin = User::factory()->create(['is_admin' => true]);
 
         $this->actingAs($admin)->post(route('admin.banners.store'), [
@@ -37,7 +37,7 @@ class RevisionMediaCashbookArchiveTest extends TestCase
         ])->assertRedirect();
 
         $banner = Banner::firstOrFail();
-        Storage::disk('public')->assertExists($banner->image_path);
+        Storage::disk('public_uploads')->assertExists($banner->image_path);
         $this->get(route('home'))->assertOk()->assertSee('Promo Banner');
 
         $oldPath = $banner->image_path;
@@ -48,8 +48,8 @@ class RevisionMediaCashbookArchiveTest extends TestCase
             'image' => UploadedFile::fake()->create('banner.png', 20, 'image/png'),
         ])->assertRedirect();
 
-        Storage::disk('public')->assertMissing($oldPath);
-        Storage::disk('public')->assertExists($banner->refresh()->image_path);
+        Storage::disk('public_uploads')->assertMissing($oldPath);
+        Storage::disk('public_uploads')->assertExists($banner->refresh()->image_path);
         $banner->update(['is_active' => false]);
         $this->get(route('home'))->assertDontSee('Banner Baru');
         $this->actingAs($admin)->post(route('admin.banners.store'), ['title' => 'Bad', 'sort_order' => 1, 'image' => UploadedFile::fake()->create('bad.php', 1, 'application/x-php')])->assertSessionHasErrors('image');
@@ -57,7 +57,7 @@ class RevisionMediaCashbookArchiveTest extends TestCase
 
     public function test_product_category_and_qris_uploads(): void
     {
-        Storage::fake('public');
+        Storage::fake('public_uploads');
         $admin = User::factory()->create(['is_admin' => true]);
         $category = Category::factory()->create(['name' => 'Aktif', 'slug' => 'aktif']);
 
@@ -77,7 +77,7 @@ class RevisionMediaCashbookArchiveTest extends TestCase
             'image' => UploadedFile::fake()->create('produk.jpg', 20, 'image/jpeg'),
         ])->assertRedirect();
         $product = Product::where('sku', 'IMG-1')->firstOrFail();
-        Storage::disk('public')->assertExists($product->image_path);
+        Storage::disk('public_uploads')->assertExists($product->image_path);
 
         $this->actingAs($admin)->put(route('admin.categories.update', $category), [
             'name' => 'Kategori Baru',
@@ -87,7 +87,7 @@ class RevisionMediaCashbookArchiveTest extends TestCase
             'is_active' => '1',
             'image' => UploadedFile::fake()->create('kategori.png', 20, 'image/png'),
         ])->assertRedirect();
-        Storage::disk('public')->assertExists($category->refresh()->image_path);
+        Storage::disk('public_uploads')->assertExists($category->refresh()->image_path);
         $this->actingAs($admin)->post(route('admin.categories.store'), ['name' => 'Duplikat', 'slug' => 'kategori-baru', 'sort_order' => 1])->assertSessionHasErrors('slug');
 
         $this->actingAs($admin)->patch(route('admin.appearance.payment'), [
@@ -99,7 +99,7 @@ class RevisionMediaCashbookArchiveTest extends TestCase
             'image' => UploadedFile::fake()->create('qris.png', 20, 'image/png'),
         ])->assertRedirect();
         $qris = PaymentMethod::where('type', 'qris')->firstOrFail();
-        Storage::disk('public')->assertExists($qris->image_path);
+        Storage::disk('public_uploads')->assertExists($qris->image_path);
         $this->actingAs($admin)->patch(route('admin.appearance.payment'), ['type' => 'qris', 'name' => 'QRIS', 'sort_order' => 1, 'image' => UploadedFile::fake()->create('bad.php', 1, 'application/x-php')])->assertSessionHasErrors('image');
     }
 

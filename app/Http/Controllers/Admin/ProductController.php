@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Support\UploadDisk;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,7 +52,7 @@ class ProductController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validatedData($request);
-        $data['image_path'] = $request->file('image')?->store('products', 'public');
+        $data['image_path'] = $request->file('image')?->store('products', UploadDisk::public());
         $product = Product::create($data);
 
         return redirect()->route('admin.products.edit', $product)->with('status', 'Produk berhasil dibuat.');
@@ -89,13 +90,13 @@ class ProductController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            $data['image_path'] = $request->file('image')->store('products', 'public');
+            $data['image_path'] = $request->file('image')->store('products', UploadDisk::public());
         }
 
         $product->update($data);
 
         if (($request->hasFile('image') || $request->boolean('remove_image')) && $oldPath) {
-            Storage::disk('public')->delete($oldPath);
+            Storage::disk(UploadDisk::public())->delete($oldPath);
         }
 
         return back()->with('status', 'Produk berhasil diperbarui.');
