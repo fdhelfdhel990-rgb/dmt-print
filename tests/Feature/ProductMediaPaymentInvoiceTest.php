@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Actions\RecordPaymentAction;
+use App\Models\Banner;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -63,7 +64,7 @@ class ProductMediaPaymentInvoiceTest extends TestCase
             'filesystems.disks.public_uploads.driver' => 's3',
             'filesystems.disks.public_uploads.bucket' => 'dmt-print-public',
             'filesystems.disks.public_uploads.root' => '',
-            'filesystems.disks.public_uploads.url' => 'https://cdn.example.test',
+            'filesystems.disks.public_uploads.url' => 'https://pub-b885074c7e424bceb5e8ad163c04ced7.r2.dev',
             'filesystems.disks.private_uploads.driver' => 's3',
             'filesystems.disks.private_uploads.bucket' => 'dmt-print',
             'filesystems.disks.private_uploads.root' => '',
@@ -72,16 +73,79 @@ class ProductMediaPaymentInvoiceTest extends TestCase
         Storage::forgetDisk('public_uploads');
         Storage::forgetDisk('private_uploads');
 
-        $this->assertSame('https://cdn.example.test/products/sample.jpg', Storage::disk(UploadDisk::public())->url('products/sample.jpg'));
+        $this->assertSame('https://pub-b885074c7e424bceb5e8ad163c04ced7.r2.dev/products/sample.jpg', Storage::disk(UploadDisk::public())->url('products/sample.jpg'));
+        $this->assertSame('https://pub-b885074c7e424bceb5e8ad163c04ced7.r2.dev/products/sample.jpg', UploadDisk::publicUrl('products/sample.jpg'));
         $this->assertSame('dmt-print-public', config('filesystems.disks.public_uploads.bucket'));
         $this->assertSame('dmt-print', config('filesystems.disks.private_uploads.bucket'));
         $this->assertNull(config('filesystems.disks.private_uploads.url'));
     }
 
+    public function test_public_media_path_validation_and_safe_url_resolution(): void
+    {
+        $this->assertTrue(UploadDisk::isValidPath('products/item.jpg'));
+        $this->assertTrue(UploadDisk::isValidPath('banners/promo.png'));
+        $this->assertFalse(UploadDisk::isValidPath(null));
+        $this->assertFalse(UploadDisk::isValidPath(''));
+        $this->assertFalse(UploadDisk::isValidPath('   '));
+        $this->assertFalse(UploadDisk::isValidPath('0'));
+        $this->assertFalse(UploadDisk::isValidPath(0));
+        $this->assertFalse(UploadDisk::isValidPath('null'));
+        $this->assertFalse(UploadDisk::isValidPath('undefined'));
+
+        $placeholder = asset('images/placeholders/product.svg');
+        $this->assertSame($placeholder, UploadDisk::publicUrl('0', UploadDisk::public(), $placeholder));
+        $this->assertSame($placeholder, UploadDisk::publicUrl(null, UploadDisk::public(), $placeholder));
+        $this->assertSame($placeholder, UploadDisk::publicUrl('', UploadDisk::public(), $placeholder));
+        $this->assertNull(UploadDisk::publicUrl('0'));
+        $this->assertNull(UploadDisk::publicUrl(null));
+        $this->assertNull(UploadDisk::publicUrl(''));
+    }
+
+    public function test_r2_public_media_url_does_not_include_bucket_name_in_path(): void
+    {
+        config([
+            'filesystems.disks.public_uploads.driver' => 's3',
+            'filesystems.disks.public_uploads.bucket' => 'dmt-print-public',
+            'filesystems.disks.public_uploads.root' => '',
+            'filesystems.disks.public_uploads.endpoint' => 'https://example-account-id.r2.cloudflarestorage.com',
+            'filesystems.disks.public_uploads.url' => 'https://pub-b885074c7e424bceb5e8ad163c04ced7.r2.dev',
+            'filesystems.disks.public_uploads.use_path_style_endpoint' => true,
+        ]);
+        Storage::forgetDisk('public_uploads');
+
+        $url = UploadDisk::publicUrl('products/stiker-vinyl.jpg');
+        $this->assertSame('https://pub-b885074c7e424bceb5e8ad163c04ced7.r2.dev/products/stiker-vinyl.jpg', $url);
+        $this->assertStringNotContainsString('dmt-print-public', $url);
+    }
+
+    public function test_private_media_disks_do_not_produce_public_urls(): void
+    {
+        $this->assertNull(UploadDisk::publicUrl('order-designs/token/design.pdf', 'private_uploads'));
+        $this->assertNull(UploadDisk::publicUrl('payment-proofs/token/proof.jpg', 'local'));
+        $this->assertNull(UploadDisk::publicUrl('order-designs/token/design.pdf', UploadDisk::private()));
+    }
+
+    public function test_homepage_and_catalog_do_not_crash_with_zero_or_empty_media_values(): void
+    {
+        $category = Category::factory()->create(['name' => 'Brosur', 'slug' => 'brosur', 'image_path' => '0']);
+        $productZero = Product::factory()->for($category)->create(['name' => 'Brosur Lipat', 'slug' => 'brosur-lipat', 'image_path' => '0', 'is_active' => true, 'is_featured' => true]);
+        $productNull = Product::factory()->for($category)->create(['name' => 'Brosur Kilat', 'slug' => 'brosur-kilat', 'image_path' => null, 'is_active' => true, 'is_featured' => true]);
+        $banner = Banner::factory()->create(['image_path' => '0', 'is_active' => true]);
+
+        $this->assertSame(asset('images/placeholders/product.svg'), $productZero->imageUrl());
+        $this->assertSame(asset('images/placeholders/product.svg'), $productNull->imageUrl());
+        $this->assertNull($category->imageUrl());
+        $this->assertNull($banner->imageUrl());
+
+        $this->get(route('home'))->assertOk()->assertSee('Brosur Lipat')->assertSee('images/placeholders/product.svg', false);
+        $this->get(route('catalog'))->assertOk()->assertSee('Brosur Lipat');
+        $this->get(route('product.show', $productZero))->assertOk()->assertSee('images/placeholders/product.svg', false);
+    }
+
     public function test_missing_product_image_uses_local_placeholder(): void
     {
         Storage::fake('public_uploads');
-        $product = Product::factory()->create(['image_path' => 'products/missing.jpg']);
+        $product = Product::factory()->create(['image_path' => null]);
 
         $this->get(route('product.show', $product))->assertOk()->assertSee('images/placeholders/product.svg', false);
     }

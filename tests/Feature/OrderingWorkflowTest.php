@@ -109,7 +109,7 @@ class OrderingWorkflowTest extends TestCase
             ->assertDontSee('<select', false)
             ->assertDontSee('name="options[', false);
 
-        $missingImage = Product::factory()->create(['image_path' => 'products/missing.jpg']);
+        $missingImage = Product::factory()->create(['image_path' => null]);
         $this->post(route('cart.store', $missingImage), ['quantity' => 1])->assertRedirect(route('cart'));
 
         $this->get(route('cart'))

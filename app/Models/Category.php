@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Storage;
 
 #[Fillable(['name', 'slug', 'description', 'image_path', 'is_active', 'is_featured', 'sort_order', 'archived_at'])]
 class Category extends Model
@@ -23,7 +22,7 @@ class Category extends Model
 
     public function imageUrl(): ?string
     {
-        return $this->image_path ? Storage::disk(UploadDisk::public())->url($this->image_path) : null;
+        return UploadDisk::publicUrl($this->image_path, UploadDisk::public());
     }
 
     protected function casts(): array

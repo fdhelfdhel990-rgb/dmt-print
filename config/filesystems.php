@@ -60,7 +60,9 @@ return [
         'public' => [
             'driver' => env('PUBLIC_FILESYSTEM_DRIVER', 'local'),
             ...(env('PUBLIC_FILESYSTEM_DRIVER', 'local') === 'local' ? ['root' => storage_path('app/public')] : []),
-            'url' => env('PUBLIC_AWS_URL', rtrim(env('APP_URL', 'http://localhost'), '/').'/storage'),
+            'url' => env('PUBLIC_FILESYSTEM_DRIVER', 'local') === 'local'
+                ? rtrim(env('APP_URL', 'http://localhost'), '/').'/storage'
+                : env('PUBLIC_AWS_URL', env('AWS_URL')),
             'key' => env('PUBLIC_AWS_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID')),
             'secret' => env('PUBLIC_AWS_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
             'region' => env('PUBLIC_AWS_DEFAULT_REGION', env('AWS_DEFAULT_REGION', 'auto')),
@@ -75,7 +77,9 @@ return [
         'public_uploads' => [
             'driver' => env('PUBLIC_FILESYSTEM_DRIVER', 'local'),
             ...(env('PUBLIC_FILESYSTEM_DRIVER', 'local') === 'local' ? ['root' => storage_path('app/public')] : []),
-            'url' => env('PUBLIC_AWS_URL', rtrim(env('APP_URL', 'http://localhost'), '/').'/storage'),
+            'url' => env('PUBLIC_FILESYSTEM_DRIVER', 'local') === 'local'
+                ? rtrim(env('APP_URL', 'http://localhost'), '/').'/storage'
+                : env('PUBLIC_AWS_URL', env('AWS_URL')),
             'key' => env('PUBLIC_AWS_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID')),
             'secret' => env('PUBLIC_AWS_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
             'region' => env('PUBLIC_AWS_DEFAULT_REGION', env('AWS_DEFAULT_REGION', 'auto')),

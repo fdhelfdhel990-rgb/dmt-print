@@ -7,7 +7,6 @@ use Database\Factories\BannerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 
 #[Fillable(['title', 'description', 'button_label', 'button_url', 'image_path', 'sort_order', 'is_active', 'archived_at'])]
 class Banner extends Model
@@ -17,7 +16,7 @@ class Banner extends Model
 
     public function imageUrl(): ?string
     {
-        return $this->image_path ? Storage::disk(UploadDisk::public())->url($this->image_path) : null;
+        return UploadDisk::publicUrl($this->image_path, UploadDisk::public());
     }
 
     protected function casts(): array

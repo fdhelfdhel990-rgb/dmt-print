@@ -30,7 +30,7 @@ class Payment extends Model
 
     public function hasProofFile(): bool
     {
-        return filled($this->proof_disk) && filled($this->proof_path);
+        return filled($this->proof_disk) && UploadDisk::isValidPath($this->proof_path);
     }
 
     public function proofExists(): bool
