@@ -30,23 +30,30 @@ RUN npm run build
 # Stage 3: Production Runtime (PHP 8.4 + Nginx + Supervisor)
 FROM php:8.4-fpm-alpine AS production-runtime
 
-# Install system dependencies, Nginx, Supervisor, CA certificates, and build libraries
+# Install system dependencies, Nginx, Supervisor, CA certificates, and runtime libraries
 RUN apk add --no-cache \
     nginx \
     supervisor \
     bash \
     curl \
     ca-certificates \
+    libzip \
+    libpng \
+    libjpeg-turbo \
+    freetype \
+    icu-libs \
+    oniguruma \
+    libxml2 \
+    && apk add --no-cache --virtual .build-deps \
+    curl-dev \
     libzip-dev \
     libpng-dev \
     libjpeg-turbo-dev \
     freetype-dev \
     icu-dev \
     oniguruma-dev \
-    libxml2-dev
-
-# Configure and install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    libxml2-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
         pdo \
         pdo_mysql \
@@ -59,7 +66,8 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         bcmath \
         opcache \
         gd \
-        intl
+        intl \
+    && apk del .build-deps
 
 # Set working directory
 WORKDIR /var/www/html
