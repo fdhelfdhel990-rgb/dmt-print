@@ -2,9 +2,13 @@
 @section('title', 'DMT Print - Digital Printing')
 @section('content')
 <section class="hero-slider" data-slider>
-    <article class="hero-slide active"><div class="site-container hero-grid"><div><p class="eyebrow">Cetak cepat & rapi</p><h1>{{ $siteHero['title'] }}</h1><p>{{ $siteHero['subtitle'] }}</p><a href="{{ route('catalog') }}" class="button button-yellow">{{ $siteHero['cta_label'] }}</a></div><div class="hero-art"><span class="mock-phone">DMT<br><b>PRINT</b></span><span class="mock-box">Paket<br>Cetak</span><span class="mock-card">PROMO<br><b>HEMAT</b></span></div></div></article>
+    @forelse($banners as $banner)
+    <article class="hero-slide {{ $loop->first ? 'active' : '' }}"><div class="site-container hero-grid"><div><p class="eyebrow">Cetak cepat & rapi</p><h1>{{ $banner->title }}</h1><p>{{ $banner->description }}</p>@if($banner->button_label)<a href="{{ $banner->button_url ?: route('catalog') }}" class="button button-yellow">{{ $banner->button_label }}</a>@endif</div><div class="hero-art">@if($banner->imageUrl())<img src="{{ $banner->imageUrl() }}" alt="{{ $banner->title }}">@else<span class="mock-phone">DMT<br><b>PRINT</b></span><span class="mock-box">Paket<br>Cetak</span>@endif</div></div></article>
+    @empty
+    <article class="hero-slide active"><div class="site-container hero-grid"><div><p class="eyebrow">Cetak cepat & rapi</p><h1>Semua kebutuhan cetak dalam satu tempat</h1><p>Mulai dari stiker, banner, kartu nama, hingga merchandise custom untuk usaha dan acara Anda.</p><a href="{{ route('catalog') }}" class="button button-yellow">Lihat Katalog</a></div><div class="hero-art"><span class="mock-phone">DMT<br><b>PRINT</b></span><span class="mock-box">Paket<br>Cetak</span><span class="mock-card">PROMO<br><b>HEMAT</b></span></div></div></article>
+    @endforelse
     <article class="hero-slide"><div class="site-container hero-grid"><div><p class="eyebrow">Untuk UMKM</p><h1>Kemasan menarik, produk makin dipercaya</h1><p>Label, stiker, paper bag, dan materi promosi yang disesuaikan dengan brand Anda.</p><a href="{{ route('catalog') }}" class="button button-yellow">Pilih Produk</a></div><div class="hero-art variant"><span class="mock-box">UMKM</span><span class="mock-card">LABEL<br><b>CUSTOM</b></span></div></div></article>
-    <div class="slider-dots"><button class="active" data-slide="0" aria-label="Banner 1"></button><button data-slide="1" aria-label="Banner 2"></button></div>
+    <div class="slider-dots">@foreach($banners->isNotEmpty() ? $banners : collect([1]) as $i => $banner)<button class="{{ $loop->first ? 'active' : '' }}" data-slide="{{ $i }}" aria-label="Banner {{ $loop->iteration }}"></button>@endforeach</div>
 </section>
 <section class="category-strip"><div class="site-container category-list">
     @foreach($categories as $i => $category)<a href="{{ route('catalog', ['category' => $category->slug]) }}" class="category-item"><span class="category-icon icon-shape-{{ ($i % 4)+1 }}"></span><span>{{ $category->name }}</span></a>@endforeach

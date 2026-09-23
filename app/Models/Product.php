@@ -8,8 +8,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['category_id', 'name', 'slug', 'sku', 'short_description', 'description', 'base_price', 'unit', 'minimum_order', 'stock_on_hand', 'stock_minimum', 'production_estimate', 'tone', 'tag', 'is_active', 'is_featured', 'sort_order'])]
+#[Fillable(['category_id', 'name', 'slug', 'sku', 'short_description', 'description', 'image_path', 'base_price', 'unit', 'minimum_order', 'stock_on_hand', 'stock_minimum', 'production_estimate', 'tone', 'tag', 'is_active', 'is_featured', 'sort_order'])]
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
@@ -38,6 +39,11 @@ class Product extends Model
     public function getRouteKeyName(): string
     {
         return 'slug';
+    }
+
+    public function imageUrl(): ?string
+    {
+        return $this->image_path ? Storage::disk('public')->url($this->image_path) : null;
     }
 
     protected function casts(): array

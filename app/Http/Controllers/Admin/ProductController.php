@@ -8,6 +8,7 @@ use App\Models\Product;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProductController extends Controller
@@ -49,7 +50,9 @@ class ProductController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $product = Product::create($this->validatedData($request));
+        $data = $this->validatedData($request);
+        $data['image_path'] = $request->file('image')?->store('products', 'public');
+        $product = Product::create($data);
 
         return redirect()->route('admin.products.edit', $product)->with('status', 'Produk berhasil dibuat.');
     }
@@ -78,7 +81,22 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product): RedirectResponse
     {
-        $product->update($this->validatedData($request, $product));
+        $data = $this->validatedData($request, $product);
+        $oldPath = $product->image_path;
+
+        if ($request->boolean('remove_image')) {
+            $data['image_path'] = null;
+        }
+
+        if ($request->hasFile('image')) {
+            $data['image_path'] = $request->file('image')->store('products', 'public');
+        }
+
+        $product->update($data);
+
+        if (($request->hasFile('image') || $request->boolean('remove_image')) && $oldPath) {
+            Storage::disk('public')->delete($oldPath);
+        }
 
         return back()->with('status', 'Produk berhasil diperbarui.');
     }
@@ -101,7 +119,8 @@ class ProductController extends Controller
         $validated = $request->validate([
             'category_id' => ['required', 'exists:categories,id'],
             'name' => ['required', 'string', 'max:255'],
-            'sku' => ['nullable', 'string', 'max:100'],
+            'slug' => ['nullable', 'string', 'max:255', 'alpha_dash', 'unique:products,slug,'.($product?->id ?? 'NULL')],
+            'sku' => ['nullable', 'string', 'max:100', 'unique:products,sku,'.($product?->id ?? 'NULL')],
             'short_description' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'base_price' => ['required', 'integer', 'min:0'],
@@ -115,9 +134,11 @@ class ProductController extends Controller
             'sort_order' => ['required', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
             'is_featured' => ['nullable', 'boolean'],
-        ]);
+            'image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'mimetypes:image/jpeg,image/png,image/webp', 'max:4096'],
+            'remove_image' => ['nullable', 'boolean'],
+        ], ['slug.unique' => 'Slug produk sudah digunakan.', 'sku.unique' => 'SKU produk sudah digunakan.', 'image.mimes' => 'Gambar harus berupa JPG, JPEG, PNG, atau WebP.']);
 
-        $validated['slug'] = $product?->slug ?? $this->uniqueSlug($validated['name']);
+        $validated['slug'] = ($validated['slug'] ?? null) ?: ($product?->slug ?? $this->uniqueSlug($validated['name']));
         $validated['is_active'] = $request->boolean('is_active');
         $validated['is_featured'] = $request->boolean('is_featured');
 

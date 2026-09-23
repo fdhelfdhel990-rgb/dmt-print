@@ -23,7 +23,9 @@ class CategoryFactory extends Factory
         return [
             'name' => ucfirst($name),
             'slug' => Str::slug($name).'-'.fake()->unique()->numberBetween(1, 99999),
+            'description' => fake()->sentence(),
             'is_active' => true,
+            'is_featured' => false,
             'sort_order' => 0,
         ];
     }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\RecordPaymentAction;
 use App\Models\Order;
+use App\Models\PaymentMethod;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,7 +37,10 @@ class OrderTrackingController extends Controller
             return back()->withInput()->withErrors(['order_number' => 'Pesanan tidak ditemukan untuk kode dan nomor WhatsApp tersebut.']);
         }
 
-        return view('customer.order-status', compact('order'));
+        return view('customer.order-status', [
+            'order' => $order,
+            'paymentMethods' => PaymentMethod::query()->where('is_active', true)->orderBy('sort_order')->get(),
+        ]);
     }
 
     public function approve(Request $request, Order $order): RedirectResponse

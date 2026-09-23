@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Banner;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Contracts\View\View;
@@ -13,7 +14,8 @@ class StorefrontController extends Controller
     {
         return view('customer.home', [
             'categories' => $this->categories(),
-            'products' => Product::query()->with('category')->where('is_active', true)->orderBy('sort_order')->get(),
+            'banners' => Banner::query()->where('is_active', true)->whereNull('archived_at')->orderBy('sort_order')->get(),
+            'products' => Product::query()->with('category')->where('is_active', true)->whereHas('category', fn ($query) => $query->where('is_active', true)->whereNull('archived_at'))->orderBy('sort_order')->get(),
         ]);
     }
 
@@ -21,13 +23,13 @@ class StorefrontController extends Controller
     {
         return view('customer.catalog', [
             'categories' => $this->categories(),
-            'products' => Product::query()->with('category')->where('is_active', true)->orderBy('sort_order')->get(),
+            'products' => Product::query()->with('category')->where('is_active', true)->whereHas('category', fn ($query) => $query->where('is_active', true)->whereNull('archived_at'))->orderBy('sort_order')->get(),
         ]);
     }
 
     public function show(Product $product): View
     {
-        abort_unless($product->is_active, 404);
+        abort_unless($product->is_active && $product->category?->is_active, 404);
 
         return view('customer.product-order', [
             'categories' => $this->categories(),
@@ -38,6 +40,6 @@ class StorefrontController extends Controller
     /** @return Collection<int, Category> */
     private function categories(): Collection
     {
-        return Category::query()->where('is_active', true)->orderBy('sort_order')->get();
+        return Category::query()->where('is_active', true)->whereNull('archived_at')->orderBy('sort_order')->get();
     }
 }

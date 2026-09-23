@@ -69,6 +69,13 @@
             @if($remaining > 0 && in_array($order->status, ['waiting_payment', 'paid'], true))
                 <section class="panel">
                     <h2>Pembayaran</h2>
+                    @foreach(($paymentMethods ?? collect()) as $method)
+                        <div class="summary-line"><span>{{ $method->name }}</span><b>{{ str($method->type)->replace('_',' ')->title() }}</b></div>
+                        @if($method->type === 'qris')
+                            @if($method->imageUrl())<img src="{{ $method->imageUrl() }}" alt="QRIS {{ $method->name }}" style="width:180px;border-radius:8px">@else<small>QRIS belum diunggah admin.</small>@endif
+                        @endif
+                        @if($method->instructions)<p>{{ $method->instructions }}</p>@endif
+                    @endforeach
                     <form method="POST" action="{{ route('orders.payment',$order) }}" enctype="multipart/form-data">
                         @csrf
                         <div class="form-group">

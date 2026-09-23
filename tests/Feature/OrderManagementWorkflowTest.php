@@ -6,7 +6,6 @@ use App\Actions\AdvanceOrderProductionAction;
 use App\Actions\RecordPaymentAction;
 use App\Actions\SetOrderFinalPriceAction;
 use App\Actions\VerifyPaymentAction;
-use App\Models\CashbookEntry;
 use App\Models\InventoryMovement;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -47,11 +46,11 @@ class OrderManagementWorkflowTest extends TestCase
         $order->refresh();
 
         $this->assertSame(120000, $order->amount_paid);
-        $this->assertSame(1, CashbookEntry::query()->where('reference', 'payment:'.$payment->id)->count());
+        $this->assertDatabaseCount('cashbook_entries', 0);
 
         app(VerifyPaymentAction::class)->cancelVerification($payment, $admin);
         $this->assertSame(0, $order->refresh()->amount_paid);
-        $this->assertNotNull(CashbookEntry::query()->where('reference', 'payment:'.$payment->id)->firstOrFail()->reversed_at);
+        $this->assertDatabaseCount('cashbook_entries', 0);
 
         $fullPayment = app(RecordPaymentAction::class)->execute($order->refresh(), 'bank_transfer', 'full', 240000);
         app(VerifyPaymentAction::class)->verify($fullPayment, $admin);

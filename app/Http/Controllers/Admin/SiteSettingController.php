@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Banner;
+use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\SiteSetting;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class SiteSettingController extends Controller
 {
@@ -15,9 +18,9 @@ class SiteSettingController extends Controller
     {
         return view('admin.appearance', [
             'business' => SiteSetting::value('business', $this->businessDefaults()),
-            'hero' => SiteSetting::value('hero', $this->heroDefaults()),
-            'payment' => SiteSetting::value('payment', $this->paymentDefaults()),
             'social' => SiteSetting::value('social', []),
+            'banners' => Banner::query()->whereNull('archived_at')->orderBy('sort_order')->get(),
+            'paymentMethods' => PaymentMethod::query()->orderBy('sort_order')->get(),
             'products' => Product::query()->where('is_active', true)->orderBy('name')->get(),
             'featuredProductIds' => Product::query()->where('is_featured', true)->pluck('id')->all(),
         ]);
@@ -38,29 +41,37 @@ class SiteSettingController extends Controller
         return back()->with('status', 'Profil usaha disimpan.');
     }
 
-    public function updateHero(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:120'],
-            'subtitle' => ['required', 'string', 'max:255'],
-            'cta_label' => ['required', 'string', 'max:80'],
-        ]);
-
-        SiteSetting::updateOrCreate(['key' => 'hero'], ['value' => $validated]);
-
-        return back()->with('status', 'Banner beranda disimpan.');
-    }
-
     public function updatePayment(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'bank_name' => ['required', 'string', 'max:100'],
-            'account_number' => ['required', 'string', 'max:100'],
-            'account_name' => ['required', 'string', 'max:255'],
-            'qris_note' => ['nullable', 'string', 'max:500'],
+            'type' => ['required', 'in:qris,bank_transfer,cash'],
+            'name' => ['required', 'string', 'max:100'],
+            'is_active' => ['nullable', 'boolean'],
+            'bank_name' => ['nullable', 'string', 'max:100'],
+            'account_number' => ['nullable', 'string', 'max:100'],
+            'account_name' => ['nullable', 'string', 'max:255'],
+            'instructions' => ['nullable', 'string', 'max:1000'],
+            'sort_order' => ['required', 'integer', 'min:0'],
+            'image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'mimetypes:image/jpeg,image/png,image/webp', 'max:4096'],
+            'remove_image' => ['nullable', 'boolean'],
         ]);
+        $method = PaymentMethod::query()->firstOrNew(['type' => $validated['type']]);
+        $oldPath = $method->image_path;
+        $validated['is_active'] = $request->boolean('is_active');
 
-        SiteSetting::updateOrCreate(['key' => 'payment'], ['value' => $validated]);
+        if ($request->boolean('remove_image')) {
+            $validated['image_path'] = null;
+        }
+
+        if ($request->hasFile('image')) {
+            $validated['image_path'] = $request->file('image')->store('payment-methods', 'public');
+        }
+
+        $method->fill($validated)->save();
+
+        if (($request->hasFile('image') || $request->boolean('remove_image')) && $oldPath) {
+            Storage::disk('public')->delete($oldPath);
+        }
 
         return back()->with('status', 'Informasi pembayaran disimpan.');
     }
@@ -70,9 +81,11 @@ class SiteSettingController extends Controller
         $validated = $request->validate([
             'instagram' => ['nullable', 'url', 'max:500'],
             'tiktok' => ['nullable', 'url', 'max:500'],
-            'youtube' => ['nullable', 'url', 'max:500'],
-            'facebook' => ['nullable', 'url', 'max:500'],
+            'show_instagram' => ['nullable', 'boolean'],
+            'show_tiktok' => ['nullable', 'boolean'],
         ]);
+        $validated['show_instagram'] = $request->boolean('show_instagram');
+        $validated['show_tiktok'] = $request->boolean('show_tiktok');
 
         SiteSetting::updateOrCreate(['key' => 'social'], ['value' => $validated]);
 
@@ -101,16 +114,4 @@ class SiteSettingController extends Controller
     /**
      * @return array<string, string>
      */
-    private function heroDefaults(): array
-    {
-        return ['title' => 'Cetak cepat untuk kebutuhan sekolah, usaha, dan acara', 'subtitle' => 'Upload desain, cek harga, dan pantau produksi dari satu tempat.', 'cta_label' => 'Mulai Pesan'];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function paymentDefaults(): array
-    {
-        return ['bank_name' => 'BCA', 'account_number' => '1234567890', 'account_name' => 'Darul Muttaqien Printing', 'qris_note' => 'QRIS tersedia setelah admin mengonfirmasi harga.'];
-    }
 }

@@ -19,7 +19,7 @@ class OrderController extends Controller
 {
     public function index(Request $request): View
     {
-        $orders = Order::query()->with('customer', 'items')->when($request->string('q')->isNotEmpty(), fn ($q) => $q->where(fn ($q) => $q->where('order_number', 'like', '%'.$request->string('q').'%')->orWhereHas('customer', fn ($q) => $q->where('name', 'like', '%'.$request->string('q').'%')->orWhere('phone', 'like', '%'.$request->string('q').'%'))))->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))->when($request->filled('fulfillment_method'), fn ($q) => $q->where('fulfillment_method', $request->string('fulfillment_method')))->latest()->paginate(15)->withQueryString();
+        $orders = Order::query()->with('customer', 'items')->when($request->boolean('archived'), fn ($q) => $q->whereNotNull('archived_at'), fn ($q) => $q->whereNull('archived_at'))->when($request->string('q')->isNotEmpty(), fn ($q) => $q->where(fn ($q) => $q->where('order_number', 'like', '%'.$request->string('q').'%')->orWhereHas('customer', fn ($q) => $q->where('name', 'like', '%'.$request->string('q').'%')->orWhere('phone', 'like', '%'.$request->string('q').'%'))))->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))->when($request->filled('fulfillment_method'), fn ($q) => $q->where('fulfillment_method', $request->string('fulfillment_method')))->latest()->paginate(15)->withQueryString();
 
         return view('admin.orders-dynamic', compact('orders'));
     }
@@ -82,5 +82,23 @@ class OrderController extends Controller
         };
 
         return back()->with('status', 'Status produksi diperbarui.');
+    }
+
+    public function archive(Request $request, Order $order): RedirectResponse
+    {
+        abort_unless(in_array($order->status, ['completed', 'cancelled'], true), 422, 'Hanya pesanan selesai atau batal yang dapat diarsipkan.');
+
+        $order->update(['archived_at' => now(), 'archived_by' => $request->user()->id]);
+        $order->activityLogs()->create(['event' => 'order.archived', 'user_id' => $request->user()->id]);
+
+        return redirect()->route('admin.orders')->with('status', 'Pesanan diarsipkan.');
+    }
+
+    public function restore(Request $request, Order $order): RedirectResponse
+    {
+        $order->update(['archived_at' => null, 'archived_by' => null]);
+        $order->activityLogs()->create(['event' => 'order.restored', 'user_id' => $request->user()->id]);
+
+        return back()->with('status', 'Pesanan dipulihkan.');
     }
 }

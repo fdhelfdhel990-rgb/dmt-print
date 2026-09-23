@@ -9,8 +9,8 @@
             <button aria-label="Cari"><span class="icon icon-search"></span></button>
         </form>
         <nav class="header-actions" aria-label="Tautan cepat">
-            <a href="#" aria-label="Instagram" class="social-dot">IG</a>
-            <a href="#" aria-label="TikTok" class="social-dot">TT</a>
+            @if(($siteSocial['show_instagram'] ?? false) && filled($siteSocial['instagram'] ?? null))<a href="{{ $siteSocial['instagram'] }}" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="social-dot">IG</a>@endif
+            @if(($siteSocial['show_tiktok'] ?? false) && filled($siteSocial['tiktok'] ?? null))<a href="{{ $siteSocial['tiktok'] }}" target="_blank" rel="noopener noreferrer" aria-label="TikTok" class="social-dot">TT</a>@endif
             <a href="{{ route('orders.track') }}" class="track-link"><span class="icon icon-receipt"></span>Cek Pesanan</a>
             <a href="{{ route('cart') }}" class="cart-link"><span class="icon icon-cart"></span><span class="cart-count">2</span></a>
         </nav>

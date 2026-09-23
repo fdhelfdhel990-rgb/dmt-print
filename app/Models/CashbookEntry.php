@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['direction', 'category', 'amount', 'reference', 'order_id', 'payment_id', 'note', 'user_id', 'reversed_at'])]
+#[Fillable(['entry_date', 'direction', 'category', 'source', 'payment_method', 'amount', 'reference', 'order_id', 'payment_id', 'note', 'user_id', 'reversed_at', 'archived_at'])]
 class CashbookEntry extends Model
 {
     /** @use HasFactory<CashbookEntryFactory> */
@@ -26,6 +26,6 @@ class CashbookEntry extends Model
 
     protected function casts(): array
     {
-        return ['amount' => 'integer', 'reversed_at' => 'datetime'];
+        return ['entry_date' => 'date', 'amount' => 'integer', 'reversed_at' => 'datetime', 'archived_at' => 'datetime'];
     }
 }

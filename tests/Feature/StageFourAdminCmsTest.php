@@ -7,6 +7,8 @@ use App\Models\Product;
 use App\Models\SiteSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class StageFourAdminCmsTest extends TestCase
@@ -15,6 +17,7 @@ class StageFourAdminCmsTest extends TestCase
 
     public function test_admin_can_manage_catalog_cms_and_admin_users(): void
     {
+        Storage::fake('public');
         $admin = User::factory()->create(['is_admin' => true, 'is_active' => true, 'role' => 'owner']);
         $category = Category::factory()->create(['name' => 'Stiker']);
 
@@ -40,14 +43,17 @@ class StageFourAdminCmsTest extends TestCase
         $response->assertRedirect(route('admin.products.edit', $product));
         $this->assertSame('stiker-hologram', $product->slug);
 
-        $this->patch(route('admin.appearance.hero'), [
+        $this->post(route('admin.banners.store'), [
             'title' => 'Cetak kilat DMT',
-            'subtitle' => 'Pesan cetak dari rumah',
-            'cta_label' => 'Pesan Sekarang',
+            'description' => 'Pesan cetak dari rumah',
+            'button_label' => 'Pesan Sekarang',
+            'sort_order' => 1,
+            'is_active' => '1',
+            'image' => UploadedFile::fake()->create('banner.jpg', 10, 'image/jpeg'),
         ])->assertRedirect();
 
         $this->get(route('home'))->assertOk()->assertSee('Cetak kilat DMT')->assertSee('Pesan Sekarang');
-        $this->assertDatabaseHas('site_settings', ['key' => 'hero']);
+        $this->assertDatabaseHas('banners', ['title' => 'Cetak kilat DMT']);
 
         $this->post(route('admin.admins.store'), [
             'name' => 'Admin Finance',
