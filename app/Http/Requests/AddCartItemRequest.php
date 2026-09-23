@@ -7,6 +7,15 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class AddCartItemRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'options' => collect($this->input('options', []))
+                ->filter(fn ($value): bool => filled($value))
+                ->all(),
+        ]);
+    }
+
     /**
      * Determine if the user is authorized to make this request.
      */

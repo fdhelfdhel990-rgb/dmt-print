@@ -3,7 +3,7 @@
 @section('breadcrumb')<a href="{{ route('home') }}">Beranda</a><span>></span><a href="{{ route('catalog') }}">Katalog</a><span>></span><b>{{ $product->name }}</b>@endsection
 @section('content')
 <section class="page-section product-detail-page"><div class="site-container product-detail-grid">
-<div class="product-gallery"><div class="product-main-art tone-{{ $product->tone }}"><x-product-image :model="$product" :alt="$product->name" class="product-image-main" loading="eager" /><span class="price-sticker">Mulai dari<br><b>Rp {{ number_format($product->base_price, 0, ',', '.') }}</b></span></div></div>
+<div class="product-gallery"><div class="product-main-art tone-{{ $product->tone }}"><x-product-image :model="$product" :alt="$product->name" class="product-image-main" loading="eager" /></div></div>
 <div class="product-config"><p class="product-code">{{ $product->category->name }} | SKU {{ $product->sku }}</p><h1>{{ $product->name }}</h1><p class="lead">{{ $product->short_description }}</p>
 <form method="POST" action="{{ route('cart.store', $product) }}">@csrf
 @foreach($product->options as $option)<div class="form-group"><label for="option-{{ $option->id }}">{{ $option->name }} @if($option->is_required)<small>(wajib)</small>@endif</label><select id="option-{{ $option->id }}" name="options[{{ $option->id }}]" @required($option->is_required)><option value="">Pilih {{ strtolower($option->name) }}</option>@foreach($option->values as $value)<option value="{{ $value->id }}">{{ $value->name }}@if($value->price_adjustment) (+Rp {{ number_format($value->price_adjustment, 0, ',', '.') }})@endif</option>@endforeach</select>@error('options.'.$option->id)<small>{{ $message }}</small>@enderror</div>@endforeach

@@ -38,6 +38,32 @@ class OrderingWorkflowTest extends TestCase
         $this->post(route('cart.store', $product), ['quantity' => 1, 'price' => 1])->assertSessionHasErrors('price');
     }
 
+    public function test_optional_product_option_can_be_left_empty(): void
+    {
+        $product = Product::factory()->create(['base_price' => 100000]);
+        $material = ProductOption::create(['product_id' => $product->id, 'name' => 'Bahan', 'is_required' => true, 'is_active' => true]);
+        $paper = ProductOptionValue::create(['product_option_id' => $material->id, 'name' => 'Art Paper', 'price_adjustment' => 20000, 'is_active' => true]);
+        $finishing = ProductOption::create(['product_id' => $product->id, 'name' => 'Finishing', 'is_required' => false, 'is_active' => true]);
+        ProductOptionValue::create(['product_option_id' => $finishing->id, 'name' => 'Laminasi', 'price_adjustment' => 10000, 'is_active' => true]);
+
+        $this->post(route('cart.store', $product), [
+            'quantity' => 1,
+            'options' => [$material->id => $paper->id, $finishing->id => ''],
+            'price' => 1,
+        ])->assertSessionHasErrors('price');
+
+        $this->post(route('cart.store', $product), [
+            'quantity' => 1,
+            'options' => [$material->id => $paper->id, $finishing->id => ''],
+        ])->assertRedirect(route('cart'));
+
+        $this->get(route('cart'))
+            ->assertOk()
+            ->assertSee('Bahan: Art Paper')
+            ->assertSee('Rp 120.000')
+            ->assertDontSee('Finishing:');
+    }
+
     public function test_cart_uses_server_price_and_supports_update_and_remove(): void
     {
         [$product, $option, $value] = $this->productWithOption();

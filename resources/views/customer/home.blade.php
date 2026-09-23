@@ -14,7 +14,7 @@
     @endif
 </section>
 <section class="category-strip"><div class="site-container category-list">
-    @foreach($categories as $i => $category)<a href="{{ route('catalog', ['kategori' => $category->slug]) }}" class="category-item"><span class="category-icon icon-shape-{{ ($i % 4)+1 }}"></span><span>{{ $category->name }}</span></a>@endforeach
+    @foreach($categories as $category)<a href="{{ route('catalog', ['kategori' => $category->slug]) }}" class="category-item"><x-category-icon :slug="$category->slug" /><span>{{ $category->name }}</span></a>@endforeach
 </div></section>
 <section class="page-section"><div class="site-container"><div class="section-heading"><div><p class="eyebrow blue">Pilihan populer</p><h2>Produk unggulan</h2></div><a href="{{ route('catalog') }}">Lihat semua <span>→</span></a></div><div class="product-grid">@foreach($products->take(4) as $product) @include('partials.product-card', ['product'=>$product]) @endforeach</div></div></section>
 <section class="promo-band"><div class="site-container promo-band-grid"><div class="promo-poster"><small>DMT PRINT</small><strong>CETAK<br>UNTUK<br>USAHA</strong><span>Harga bersahabat</span></div><div><p class="eyebrow">Solusi UMKM</p><h2>Buat brand Anda tampil lebih profesional</h2><p>Siapkan kebutuhan promosi dan kemasan dengan pilihan bahan, ukuran, dan finishing yang fleksibel.</p><div class="benefit-row"><span><b>01</b>Konsultasi produk</span><span><b>02</b>Estimasi transparan</span><span><b>03</b>Pengerjaan terpantau</span></div><a href="{{ route('catalog') }}" class="button button-primary">Jelajahi Produk</a></div></div></section>

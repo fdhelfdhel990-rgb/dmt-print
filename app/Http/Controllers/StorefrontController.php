@@ -57,7 +57,13 @@ class StorefrontController extends Controller
 
         return view('customer.product-order', [
             'categories' => $this->categories(),
-            'product' => $product->load(['category', 'options' => fn ($query) => $query->where('is_active', true), 'options.values' => fn ($query) => $query->where('is_active', true)]),
+            'product' => $product->load([
+                'category',
+                'options' => fn ($query) => $query
+                    ->where('is_active', true)
+                    ->whereHas('values', fn ($query) => $query->where('is_active', true)),
+                'options.values' => fn ($query) => $query->where('is_active', true),
+            ]),
         ]);
     }
 

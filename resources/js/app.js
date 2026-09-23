@@ -57,9 +57,13 @@ document.addEventListener('DOMContentLoaded', () => {
             stop();
             timer = window.setInterval(() => show(active + 1), 6000);
         };
-        dots.forEach((dot) => dot.addEventListener('click', () => show(Number(dot.dataset.slide))));
-        previous?.addEventListener('click', () => show(active - 1));
-        next?.addEventListener('click', () => show(active + 1));
+        const go = (index) => {
+            show(index);
+            start();
+        };
+        dots.forEach((dot) => dot.addEventListener('click', () => go(Number(dot.dataset.slide))));
+        previous?.addEventListener('click', () => go(active - 1));
+        next?.addEventListener('click', () => go(active + 1));
         slider.addEventListener('mouseenter', stop);
         slider.addEventListener('mouseleave', start);
         document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
@@ -73,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const delta = (event.changedTouches[0]?.clientX ?? touchStart) - touchStart;
             if (Math.abs(delta) > 40) {
-                show(active + (delta < 0 ? 1 : -1));
+                go(active + (delta < 0 ? 1 : -1));
             }
             touchStart = null;
         });
