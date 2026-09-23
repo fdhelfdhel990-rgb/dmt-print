@@ -44,10 +44,51 @@ class OrderingWorkflowTest extends TestCase
         $key = hash('sha256', $product->id.'|'.collect([$option->id => $value->id])->sortKeys()->toJson());
 
         $this->post(route('cart.store', $product), ['quantity' => 2, 'options' => [$option->id => $value->id]])->assertRedirect(route('cart'));
-        $this->get(route('cart'))->assertSee('Rp 240.000');
+        $this->get(route('cart'))
+            ->assertOk()
+            ->assertSee('cart-row-refined', false)
+            ->assertSee($product->name)
+            ->assertSee('Ukuran: A3')
+            ->assertSee('Hapus')
+            ->assertSee('data-qty-minus', false)
+            ->assertSee('data-qty-plus', false)
+            ->assertSee('Rp 240.000')
+            ->assertDontSee('name="options[', false);
         $this->patch(route('cart.update', $key), ['quantity' => 3])->assertSessionHasNoErrors();
         $this->delete(route('cart.destroy', $key))->assertSessionHasNoErrors();
         $this->get(route('cart'))->assertSee('Keranjang masih kosong');
+    }
+
+    public function test_cart_uses_product_image_or_placeholder_without_reconfiguring_options(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('products/cart-image.jpg', 'fake-image');
+        $product = Product::factory()->create(['image_path' => 'products/cart-image.jpg']);
+        $size = ProductOption::create(['product_id' => $product->id, 'name' => 'Ukuran', 'is_required' => true, 'is_active' => true]);
+        $a3 = ProductOptionValue::create(['product_option_id' => $size->id, 'name' => 'A3', 'price_adjustment' => 20000, 'is_active' => true]);
+        $finishing = ProductOption::create(['product_id' => $product->id, 'name' => 'Finishing', 'is_required' => true, 'is_active' => true]);
+        $lamination = ProductOptionValue::create(['product_option_id' => $finishing->id, 'name' => 'Laminasi Doff', 'price_adjustment' => 10000, 'is_active' => true]);
+
+        $this->post(route('cart.store', $product), [
+            'quantity' => 1,
+            'options' => [$size->id => $a3->id, $finishing->id => $lamination->id],
+        ])->assertRedirect(route('cart'));
+
+        $this->get(route('cart'))
+            ->assertOk()
+            ->assertSee('/storage/products/cart-image.jpg', false)
+            ->assertSee('Ukuran: A3')
+            ->assertSee('Finishing: Laminasi Doff')
+            ->assertSee('loading="lazy"', false)
+            ->assertDontSee('<select', false)
+            ->assertDontSee('name="options[', false);
+
+        $missingImage = Product::factory()->create(['image_path' => 'products/missing.jpg']);
+        $this->post(route('cart.store', $missingImage), ['quantity' => 1])->assertRedirect(route('cart'));
+
+        $this->get(route('cart'))
+            ->assertOk()
+            ->assertSee('/images/placeholders/product.svg', false);
     }
 
     public function test_cart_badge_follows_total_quantity(): void

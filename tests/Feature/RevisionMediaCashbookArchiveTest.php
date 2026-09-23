@@ -129,10 +129,31 @@ class RevisionMediaCashbookArchiveTest extends TestCase
         $completed = Order::factory()->create(['status' => 'completed']);
         OrderItem::factory()->for($completed)->create();
 
+        $this->actingAs($admin)->get(route('admin.orders'))
+            ->assertOk()
+            ->assertSee($active->order_number)
+            ->assertSee($completed->order_number)
+            ->assertSee('Arsipkan pesanan '.$completed->order_number)
+            ->assertDontSee('Arsipkan pesanan '.$active->order_number);
+        $this->actingAs($admin)->get(route('admin.orders.show', $active))
+            ->assertOk()
+            ->assertSee('Pesanan aktif belum dapat diarsipkan.')
+            ->assertDontSee('Arsipkan pesanan '.$active->order_number);
+        $this->actingAs($admin)->get(route('admin.orders.show', $completed))
+            ->assertOk()
+            ->assertSee('Arsipkan pesanan '.$completed->order_number);
         $this->actingAs($admin)->post(route('admin.orders.archive', $active))->assertStatus(422);
         $this->actingAs($admin)->post(route('admin.orders.archive', $completed))->assertRedirect(route('admin.orders'));
         $this->actingAs($admin)->get(route('admin.orders'))->assertDontSee($completed->order_number);
-        $this->actingAs($admin)->get(route('admin.orders', ['archived' => 1]))->assertSee($completed->order_number);
+        $this->actingAs($admin)->get(route('admin.orders', ['archived' => 1]))
+            ->assertOk()
+            ->assertSee($completed->order_number)
+            ->assertSee('Pulihkan')
+            ->assertDontSee('Arsipkan pesanan '.$completed->order_number);
+        $this->actingAs($admin)->get(route('admin.orders.show', $completed->refresh()))
+            ->assertOk()
+            ->assertSee('Pulihkan')
+            ->assertDontSee('Arsipkan pesanan '.$completed->order_number);
         $this->assertSame(1, $completed->items()->count());
         auth()->logout();
         $this->post(route('admin.orders.archive', $completed))->assertRedirect(route('admin.login'));
