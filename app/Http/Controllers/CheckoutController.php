@@ -43,6 +43,6 @@ class CheckoutController extends Controller
 
     public function success(Order $order): View
     {
-        return view('customer.order-success', compact('order'));
+        return view('customer.order-success', ['order' => $order->load('items.options')]);
     }
 }

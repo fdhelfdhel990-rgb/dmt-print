@@ -45,10 +45,10 @@ Route::get('/checkout/penerima', [CheckoutController::class, 'create'])->name('c
 Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:10,1')->name('checkout.store');
 Route::get('/pesanan/selesai/{order:public_token}', [CheckoutController::class, 'success'])->name('orders.success');
 Route::get('/cek-pesanan', [OrderTrackingController::class, 'create'])->name('orders.track');
-Route::get('/status-pesanan', [OrderTrackingController::class, 'show'])->name('orders.status');
-Route::post('/pesanan/{order}/setujui', [OrderTrackingController::class, 'approve'])->name('orders.approve');
-Route::post('/pesanan/{order}/revisi', [OrderTrackingController::class, 'revise'])->name('orders.revise');
-Route::post('/pesanan/{order}/pembayaran', [OrderTrackingController::class, 'payment'])->name('orders.payment');
+Route::get('/status-pesanan', [OrderTrackingController::class, 'show'])->middleware('throttle:30,1')->name('orders.status');
+Route::post('/pesanan/{order}/setujui', [OrderTrackingController::class, 'approve'])->middleware('throttle:10,1')->name('orders.approve');
+Route::post('/pesanan/{order}/revisi', [OrderTrackingController::class, 'revise'])->middleware('throttle:10,1')->name('orders.revise');
+Route::post('/pesanan/{order}/pembayaran', [OrderTrackingController::class, 'payment'])->middleware('throttle:10,1')->name('orders.payment');
 
 Route::get('/admin', [AuthenticatedSessionController::class, 'create'])->middleware('guest')->name('admin.login');
 Route::post('/admin/login', [AuthenticatedSessionController::class, 'store'])->middleware(['guest', 'throttle:6,1'])->name('admin.login.store');
@@ -62,6 +62,7 @@ Route::prefix('admin-preview')->name('admin.')->middleware(['auth', 'admin'])->g
     ]))->name('dashboard');
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('/pesanan', [AdminOrderController::class, 'index'])->name('orders');
+    Route::get('/pesanan/{order}/invoice', [AdminOrderController::class, 'invoice'])->name('orders.invoice');
     Route::get('/pesanan/{order?}', [AdminOrderController::class, 'show'])->name('orders.show');
     Route::post('/pesanan/{order}/harga', [AdminOrderController::class, 'price'])->name('orders.price');
     Route::post('/pesanan/{order}/produksi', [AdminOrderController::class, 'production'])->name('orders.production');
@@ -70,6 +71,8 @@ Route::prefix('admin-preview')->name('admin.')->middleware(['auth', 'admin'])->g
     Route::post('/pembayaran/{payment}/verifikasi', [AdminOrderController::class, 'verifyPayment'])->name('payments.verify');
     Route::post('/pembayaran/{payment}/tolak', [AdminOrderController::class, 'rejectPayment'])->name('payments.reject');
     Route::post('/pembayaran/{payment}/batalkan-verifikasi', [AdminOrderController::class, 'cancelPaymentVerification'])->name('payments.cancel-verification');
+    Route::get('/pembayaran/{payment}/bukti/lihat', [AdminOrderController::class, 'previewPaymentProof'])->name('payments.proof.preview');
+    Route::get('/pembayaran/{payment}/bukti/download', [AdminOrderController::class, 'downloadPaymentProof'])->name('payments.proof.download');
     Route::get('/file-pesanan/{file}/download', [AdminOrderController::class, 'download'])->name('order-files.download');
     Route::get('/produk', [AdminProductController::class, 'index'])->name('products');
     Route::get('/produk/tambah', [AdminProductController::class, 'create'])->name('products.create');

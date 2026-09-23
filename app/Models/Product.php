@@ -43,7 +43,11 @@ class Product extends Model
 
     public function imageUrl(): ?string
     {
-        return $this->image_path ? Storage::disk('public')->url($this->image_path) : null;
+        if (! filled($this->image_path) || ! Storage::disk('public')->exists($this->image_path)) {
+            return asset('images/placeholders/product.svg');
+        }
+
+        return Storage::disk('public')->url($this->image_path);
     }
 
     protected function casts(): array

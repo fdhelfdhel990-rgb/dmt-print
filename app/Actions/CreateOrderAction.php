@@ -35,7 +35,19 @@ class CreateOrderAction
                 foreach ($this->cart->items() as $cartItem) {
                     $product = $cartItem['product'];
                     $price = $cartItem['price'];
-                    $item = $order->items()->create(['product_id' => $product->id, 'product_name' => $product->name, 'sku' => $product->sku, 'unit' => $product->unit, 'quantity' => $cartItem['quantity'], 'base_price' => $price['base_price'], 'options_total' => $price['options_total'], 'unit_estimate' => $price['unit_estimate'], 'subtotal' => $price['subtotal']]);
+                    $item = $order->items()->create([
+                        'product_id' => $product->id,
+                        'product_name' => $product->name,
+                        'sku' => $product->sku,
+                        'product_image_disk' => filled($product->image_path) ? 'public' : null,
+                        'product_image_path' => $product->image_path,
+                        'unit' => $product->unit,
+                        'quantity' => $cartItem['quantity'],
+                        'base_price' => $price['base_price'],
+                        'options_total' => $price['options_total'],
+                        'unit_estimate' => $price['unit_estimate'],
+                        'subtotal' => $price['subtotal'],
+                    ]);
                     foreach ($price['values'] as $value) {
                         $item->options()->create(['option_name' => $value['option_name'], 'option_value' => $value['option_value'], 'price_adjustment' => $value['price_adjustment']]);
                     }

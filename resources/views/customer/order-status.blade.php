@@ -124,13 +124,13 @@
             <section class="panel">
                 <h2>Ringkasan Pesanan</h2>
                 @foreach($order->items as $item)
-                    <div class="summary-product"><span class="summary-thumb"></span><div><b>{{ $item->product_name }}</b><small>{{ $item->quantity }} {{ $item->unit }}</small></div></div>
+                    <div class="summary-product"><x-product-image :model="$item" :alt="$item->product_name" class="summary-thumb" /><div><b>{{ $item->product_name }}</b><small>@foreach($item->options as $option){{ $option->option_name }}: {{ $option->option_value }}@if(!$loop->last) | @endif @endforeach<br>{{ $item->quantity }} {{ $item->unit }}</small></div></div>
                 @endforeach
                 <div class="summary-line"><span>Total pesanan</span><b>{{ $order->final_total === null ? 'Menunggu admin' : 'Rp '.number_format($order->final_total,0,',','.') }}</b></div>
                 <div class="summary-line"><span>Sudah dibayar</span><b>Rp {{ number_format($order->amount_paid,0,',','.') }}</b></div>
                 <div class="summary-line total"><span>Sisa pembayaran</span><b>Rp {{ number_format($remaining,0,',','.') }}</b></div>
             </section>
-            <section class="panel help-panel"><h3>Butuh bantuan?</h3><p>Hubungi admin dan sertakan kode pesanan.</p><a href="#">Chat WhatsApp</a></section>
+            <section class="panel help-panel"><h3>Butuh bantuan?</h3><p>Hubungi admin dan sertakan kode pesanan.</p></section>
         </aside>
     </div>
 </section>

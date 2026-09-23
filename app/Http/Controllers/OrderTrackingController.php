@@ -28,7 +28,7 @@ class OrderTrackingController extends Controller
         ]);
 
         $order = Order::query()
-            ->with('customer', 'items', 'payments', 'statusHistories')
+            ->with('customer', 'items.options', 'items.product', 'payments', 'statusHistories')
             ->where('order_number', $validated['order_number'])
             ->whereHas('customer', fn ($query) => $query->where('phone', $this->normalizePhone($validated['phone'])))
             ->first();

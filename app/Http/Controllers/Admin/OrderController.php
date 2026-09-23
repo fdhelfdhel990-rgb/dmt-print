@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderFile;
 use App\Models\Payment;
+use App\Models\SiteSetting;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,12 +27,57 @@ class OrderController extends Controller
 
     public function show(Order $order): View
     {
-        return view('admin.order-detail-dynamic', ['order' => $order->load('customer', 'items.options', 'items.files', 'payments', 'statusHistories.user')]);
+        return view('admin.order-detail-dynamic', ['order' => $order->load('customer', 'items.options', 'items.files', 'items.product', 'payments', 'statusHistories.user')]);
     }
 
     public function download(OrderFile $file): StreamedResponse
     {
+        abort_unless(Storage::disk($file->disk)->exists($file->path), 404);
+
         return Storage::disk($file->disk)->download($file->path, $file->original_name);
+    }
+
+    public function downloadPaymentProof(Request $request, Payment $payment): StreamedResponse
+    {
+        abort_unless($payment->hasProofFile(), 404);
+        abort_if($payment->proof_disk === 'public', 404);
+        abort_unless($payment->proofExists(), 404);
+
+        $payment->order->activityLogs()->create([
+            'event' => 'payment.proof_downloaded',
+            'properties' => ['payment_id' => $payment->id],
+            'user_id' => $request->user()->id,
+        ]);
+
+        return Storage::disk($payment->proof_disk)->download($payment->proof_path, $payment->safeProofDownloadName());
+    }
+
+    public function previewPaymentProof(Payment $payment): StreamedResponse
+    {
+        abort_unless($payment->hasProofFile() && $payment->isProofPreviewable(), 404);
+        abort_if($payment->proof_disk === 'public', 404);
+        abort_unless($payment->proofExists(), 404);
+
+        return Storage::disk($payment->proof_disk)->response($payment->proof_path, $payment->safeProofDownloadName(), [
+            'Content-Type' => $payment->proof_mime_type ?: 'application/octet-stream',
+            'Content-Disposition' => 'inline; filename="'.$payment->safeProofDownloadName().'"',
+        ]);
+    }
+
+    public function invoice(Order $order): View
+    {
+        $order->load('customer', 'items.options', 'items.product', 'payments');
+        $verifiedTotal = $order->payments->where('status', 'verified')->sum('amount');
+        $total = (int) ($order->final_total ?? $order->estimated_total);
+
+        return view('admin.order-invoice', [
+            'business' => SiteSetting::value('business', ['business_name' => 'Darul Muttaqien Printing', 'phone' => '08xx-xxxx-xxxx', 'address' => 'Jl. Contoh No. 12, Sleman, DI Yogyakarta', 'opening_hours' => 'Senin-Sabtu, 08.00-20.00', 'maps_url' => '']),
+            'invoiceNumber' => 'INV-'.$order->order_number,
+            'order' => $order,
+            'remaining' => max(0, $total - $verifiedTotal),
+            'total' => $total,
+            'verifiedTotal' => $verifiedTotal,
+        ]);
     }
 
     public function price(Request $request, Order $order, SetOrderFinalPriceAction $action): RedirectResponse
