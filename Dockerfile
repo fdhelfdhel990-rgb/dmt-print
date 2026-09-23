@@ -84,6 +84,7 @@ COPY --from=frontend-stage /app/public/build /var/www/html/public/build
 # Copy configuration files
 COPY docker/default.conf.template /etc/nginx/templates/default.conf.template
 COPY docker/php.ini /usr/local/etc/php/conf.d/99-production.ini
+COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/zz-docker-custom.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
