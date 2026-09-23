@@ -35,12 +35,62 @@ document.addEventListener('DOMContentLoaded', () => {
     if (slider) {
         const slides = [...slider.querySelectorAll('.hero-slide')];
         const dots = [...slider.querySelectorAll('[data-slide]')];
+        const previous = slider.querySelector('[data-slide-prev]');
+        const next = slider.querySelector('[data-slide-next]');
+        let active = Math.max(0, slides.findIndex((slide) => slide.classList.contains('active')));
+        let timer = null;
         const show = (index) => {
-            slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
-            dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+            active = (index + slides.length) % slides.length;
+            slides.forEach((slide, i) => slide.classList.toggle('active', i === active));
+            dots.forEach((dot, i) => dot.classList.toggle('active', i === active));
+        };
+        const stop = () => {
+            if (timer) {
+                window.clearInterval(timer);
+                timer = null;
+            }
+        };
+        const start = () => {
+            if (slides.length < 2 || document.hidden) {
+                return;
+            }
+            stop();
+            timer = window.setInterval(() => show(active + 1), 6000);
         };
         dots.forEach((dot) => dot.addEventListener('click', () => show(Number(dot.dataset.slide))));
-        let active = 0;
-        window.setInterval(() => { active = (active + 1) % slides.length; show(active); }, 6000);
+        previous?.addEventListener('click', () => show(active - 1));
+        next?.addEventListener('click', () => show(active + 1));
+        slider.addEventListener('mouseenter', stop);
+        slider.addEventListener('mouseleave', start);
+        document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
+        let touchStart = null;
+        slider.addEventListener('touchstart', (event) => {
+            touchStart = event.touches[0]?.clientX ?? null;
+        }, { passive: true });
+        slider.addEventListener('touchend', (event) => {
+            if (touchStart === null) {
+                return;
+            }
+            const delta = (event.changedTouches[0]?.clientX ?? touchStart) - touchStart;
+            if (Math.abs(delta) > 40) {
+                show(active + (delta < 0 ? 1 : -1));
+            }
+            touchStart = null;
+        });
+        start();
     }
+
+    document.querySelectorAll('[data-copy-button]').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const source = button.closest('.payment-method-card')?.querySelector('[data-copy-source]');
+            const feedback = document.querySelector('[data-copy-feedback]');
+            if (!source) {
+                return;
+            }
+            await navigator.clipboard?.writeText(source.textContent.trim());
+            if (feedback) {
+                feedback.textContent = 'Nomor rekening berhasil disalin';
+            }
+        });
+    });
 });

@@ -1,2 +1,10 @@
 *
 !.gitignore
+!banners/
+!banners/.gitkeep
+!products/
+!products/.gitkeep
+!categories/
+!categories/.gitkeep
+!payment-methods/
+!payment-methods/.gitkeep

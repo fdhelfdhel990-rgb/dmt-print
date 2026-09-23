@@ -70,6 +70,11 @@ class CartService
         return $this->items()->sum(fn (array $item) => $item['price']['subtotal']);
     }
 
+    public function quantity(): int
+    {
+        return collect($this->raw())->sum(fn (array $item) => (int) ($item['quantity'] ?? 0));
+    }
+
     public function isEmpty(): bool
     {
         return $this->raw() === [];

@@ -39,7 +39,7 @@ class OrderTrackingController extends Controller
 
         return view('customer.order-status', [
             'order' => $order,
-            'paymentMethods' => PaymentMethod::query()->where('is_active', true)->orderBy('sort_order')->get(),
+            'paymentMethods' => PaymentMethod::query()->where('is_active', true)->orderBy('sort_order')->get()->filter->isAvailableForCustomer()->values(),
         ]);
     }
 
@@ -72,6 +72,9 @@ class OrderTrackingController extends Controller
             'payment_type' => ['required', 'in:down_payment,full,settlement'],
             'proof' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ]);
+        abort_unless(in_array($order->status, ['waiting_payment', 'paid'], true) && $remaining > 0, 403);
+        abort_unless(PaymentMethod::query()->where('type', $validated['method'])->where('is_active', true)->get()->contains->isAvailableForCustomer(), 422);
+
         $amount = match ($validated['payment_type']) {
             'down_payment' => min($remaining, $minimumDownPayment),
             default => $remaining,

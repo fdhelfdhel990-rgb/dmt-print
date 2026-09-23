@@ -9,6 +9,8 @@
 @section('content')
 @php
     $remaining = max(0, (int) $order->final_total - (int) $order->amount_paid);
+    $minimumDownPayment = (int) ceil(((int) $order->final_total) / 2);
+    $payableAmount = $order->amount_paid > 0 ? $remaining : min($remaining, $minimumDownPayment);
 @endphp
 <section class="page-section">
     <div class="site-container order-status-grid">
@@ -23,7 +25,7 @@
             </div>
 
             @if(session('status'))
-                <section class="panel">{{ session('status') }}</section>
+                <section class="panel" aria-live="polite">{{ session('status') }}</section>
             @endif
 
             <section class="panel">
@@ -69,36 +71,52 @@
             @if($remaining > 0 && in_array($order->status, ['waiting_payment', 'paid'], true))
                 <section class="panel">
                     <h2>Pembayaran</h2>
-                    @foreach(($paymentMethods ?? collect()) as $method)
-                        <div class="summary-line"><span>{{ $method->name }}</span><b>{{ str($method->type)->replace('_',' ')->title() }}</b></div>
-                        @if($method->type === 'qris')
-                            @if($method->imageUrl())<img src="{{ $method->imageUrl() }}" alt="QRIS {{ $method->name }}" style="width:180px;border-radius:8px">@else<small>QRIS belum diunggah admin.</small>@endif
-                        @endif
-                        @if($method->instructions)<p>{{ $method->instructions }}</p>@endif
-                    @endforeach
-                    <form method="POST" action="{{ route('orders.payment',$order) }}" enctype="multipart/form-data">
-                        @csrf
-                        <div class="form-group">
-                            <label>Metode</label>
-                            <select name="method">
-                                <option value="qris">QRIS</option>
-                                <option value="bank_transfer">Transfer bank</option>
-                                <option value="cash">Bayar langsung</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Jenis</label>
-                            <select name="payment_type">
-                                <option value="{{ $order->amount_paid > 0 ? 'settlement' : 'down_payment' }}">{{ $order->amount_paid > 0 ? 'Pelunasan' : 'DP 50%' }}</option>
-                                <option value="full">Pembayaran penuh</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Bukti pembayaran</label>
-                            <input type="file" name="proof">
-                        </div>
-                        <button class="button button-primary">Kirim Pembayaran</button>
-                    </form>
+                    <div class="summary-line total"><span>Nominal yang harus dibayar</span><b>Rp {{ number_format($payableAmount,0,',','.') }}</b></div>
+                    @forelse(($paymentMethods ?? collect()) as $method)
+                        <form method="POST" action="{{ route('orders.payment',$order) }}" enctype="multipart/form-data" class="payment-method-card">
+                            @csrf
+                            <input type="hidden" name="method" value="{{ $method->type }}">
+                            <div class="payment-method-heading">
+                                <div><b>{{ $method->name }}</b><small>{{ str($method->type)->replace('_',' ')->title() }}</small></div>
+                                <span>Rp {{ number_format($payableAmount,0,',','.') }}</span>
+                            </div>
+                            @if($method->type === 'qris')
+                                <img src="{{ $method->imageUrl() }}" alt="QRIS {{ $method->name }}" class="qris-image">
+                            @elseif($method->type === 'bank_transfer')
+                                <dl class="payment-detail-list">
+                                    <div><dt>Bank</dt><dd>{{ $method->bank_name }}</dd></div>
+                                    <div><dt>Nomor rekening</dt><dd><span data-copy-source>{{ $method->account_number }}</span> <button type="button" class="text-button" data-copy-button>Salin</button></dd></div>
+                                    <div><dt>Atas nama</dt><dd>{{ $method->account_name }}</dd></div>
+                                </dl>
+                            @else
+                                <p>Pembayaran dilakukan langsung di lokasi DMT Print.</p>
+                            @endif
+                            @if($method->instructions)<p>{{ $method->instructions }}</p>@endif
+                            <div class="form-group">
+                                <label>Jenis pembayaran</label>
+                                <select name="payment_type">
+                                    @if($order->amount_paid > 0)
+                                        <option value="settlement">Pelunasan</option>
+                                    @else
+                                        <option value="down_payment">DP 50%</option>
+                                        <option value="full">Pembayaran penuh</option>
+                                    @endif
+                                </select>
+                            </div>
+                            @if($method->type !== 'cash')
+                                <div class="form-group">
+                                    <label>Bukti pembayaran</label>
+                                    <input type="file" name="proof">
+                                </div>
+                            @endif
+                            <button class="button button-primary">{{ $method->type === 'cash' ? 'Pilih Bayar di Lokasi' : 'Upload Bukti Pembayaran' }}</button>
+                        </form>
+                    @empty
+                        <section class="empty-state">
+                            <p>Belum ada metode pembayaran aktif. Silakan hubungi admin untuk instruksi pembayaran.</p>
+                        </section>
+                    @endforelse
+                    <p class="copy-feedback" data-copy-feedback aria-live="polite"></p>
                 </section>
             @endif
         </div>

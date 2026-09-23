@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ProductOption;
 use App\Models\ProductOptionValue;
@@ -47,6 +48,20 @@ class OrderingWorkflowTest extends TestCase
         $this->patch(route('cart.update', $key), ['quantity' => 3])->assertSessionHasNoErrors();
         $this->delete(route('cart.destroy', $key))->assertSessionHasNoErrors();
         $this->get(route('cart'))->assertSee('Keranjang masih kosong');
+    }
+
+    public function test_cart_badge_follows_total_quantity(): void
+    {
+        $product = Product::factory()->create();
+        $key = hash('sha256', $product->id.'|[]');
+
+        $this->get(route('home'))->assertDontSee('class="cart-count"', false);
+        $this->post(route('cart.store', $product), ['quantity' => 2])->assertSessionHas('success', 'Produk berhasil ditambahkan ke keranjang.');
+        $this->get(route('home'))->assertSee('class="cart-count"', false)->assertSee('2');
+        $this->patch(route('cart.update', $key), ['quantity' => 4]);
+        $this->get(route('home'))->assertSee('4');
+        $this->delete(route('cart.destroy', $key));
+        $this->get(route('home'))->assertDontSee('class="cart-count"', false);
     }
 
     public function test_inactive_product_and_below_minimum_quantity_are_rejected(): void
@@ -126,6 +141,35 @@ class OrderingWorkflowTest extends TestCase
         ])->assertRedirect(route('admin.dashboard'));
         $this->get(route('admin.orders'))->assertOk()->assertSee($order->order_number);
         $this->get(route('admin.orders.show', $order))->assertOk()->assertSee($order->order_number);
+    }
+
+    public function test_customer_payment_methods_only_show_available_backend_amounts(): void
+    {
+        Storage::fake('public');
+        $order = Order::factory()->create(['status' => 'waiting_payment', 'final_total' => 120000, 'amount_paid' => 0]);
+        $order->statusHistories()->create(['status' => 'waiting_payment']);
+        $order->items()->create(['product_id' => Product::factory()->create()->id, 'product_name' => 'Poster', 'quantity' => 1, 'unit' => 'pcs', 'base_price' => 120000, 'unit_estimate' => 120000, 'subtotal' => 120000]);
+        PaymentMethod::factory()->create(['type' => 'qris', 'name' => 'QRIS Kosong', 'image_path' => null, 'is_active' => true]);
+        PaymentMethod::factory()->create(['type' => 'qris', 'name' => 'QRIS DMT', 'image_path' => 'payment-methods/qris.png', 'is_active' => true]);
+        PaymentMethod::factory()->create(['type' => 'bank_transfer', 'name' => 'BCA DMT', 'bank_name' => 'BCA', 'account_number' => '1234567890', 'account_name' => 'DMT Print', 'is_active' => true]);
+        PaymentMethod::factory()->create(['type' => 'bank_transfer', 'name' => 'Bank Tidak Lengkap', 'bank_name' => 'BRI', 'account_number' => null, 'account_name' => 'DMT Print', 'is_active' => true]);
+        PaymentMethod::factory()->create(['type' => 'cash', 'name' => 'Bayar di Lokasi', 'is_active' => false]);
+
+        $this->get(route('orders.status', ['order_number' => $order->order_number, 'phone' => $order->customer->phone]))
+            ->assertOk()
+            ->assertSee('QRIS DMT')
+            ->assertSee('BCA DMT')
+            ->assertSee('Rp 60.000')
+            ->assertSee('/storage/payment-methods/qris.png', false)
+            ->assertDontSee('QRIS Kosong')
+            ->assertDontSee('Bank Tidak Lengkap')
+            ->assertDontSee('Bayar di Lokasi');
+
+        $pending = Order::factory()->create(['status' => 'waiting_customer_approval', 'final_total' => 120000]);
+        $pending->statusHistories()->create(['status' => 'waiting_customer_approval']);
+        $this->get(route('orders.status', ['order_number' => $pending->order_number, 'phone' => $pending->customer->phone]))
+            ->assertOk()
+            ->assertDontSee('QRIS DMT');
     }
 
     public function test_empty_cart_is_rejected_and_validation_returns_to_checkout(): void

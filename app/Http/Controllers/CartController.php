@@ -21,7 +21,7 @@ class CartController extends Controller
         abort_unless($product->is_active, 404);
         $cart->add($product, $request->validated('options', []), $request->integer('quantity'));
 
-        return redirect()->route('cart')->with('success', 'Produk ditambahkan ke keranjang.');
+        return redirect()->route('cart')->with('success', 'Produk berhasil ditambahkan ke keranjang.');
     }
 
     public function update(UpdateCartItemRequest $request, string $key, CartService $cart): RedirectResponse

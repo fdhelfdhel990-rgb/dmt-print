@@ -7,11 +7,14 @@
     @empty
     <article class="hero-slide active"><div class="site-container hero-grid"><div><p class="eyebrow">Cetak cepat & rapi</p><h1>Semua kebutuhan cetak dalam satu tempat</h1><p>Mulai dari stiker, banner, kartu nama, hingga merchandise custom untuk usaha dan acara Anda.</p><a href="{{ route('catalog') }}" class="button button-yellow">Lihat Katalog</a></div><div class="hero-art"><span class="mock-phone">DMT<br><b>PRINT</b></span><span class="mock-box">Paket<br>Cetak</span><span class="mock-card">PROMO<br><b>HEMAT</b></span></div></div></article>
     @endforelse
-    <article class="hero-slide"><div class="site-container hero-grid"><div><p class="eyebrow">Untuk UMKM</p><h1>Kemasan menarik, produk makin dipercaya</h1><p>Label, stiker, paper bag, dan materi promosi yang disesuaikan dengan brand Anda.</p><a href="{{ route('catalog') }}" class="button button-yellow">Pilih Produk</a></div><div class="hero-art variant"><span class="mock-box">UMKM</span><span class="mock-card">LABEL<br><b>CUSTOM</b></span></div></div></article>
-    <div class="slider-dots">@foreach($banners->isNotEmpty() ? $banners : collect([1]) as $i => $banner)<button class="{{ $loop->first ? 'active' : '' }}" data-slide="{{ $i }}" aria-label="Banner {{ $loop->iteration }}"></button>@endforeach</div>
+    @if($banners->count() > 1)
+        <button class="slider-arrow slider-prev" type="button" data-slide-prev aria-label="Banner sebelumnya">‹</button>
+        <button class="slider-arrow slider-next" type="button" data-slide-next aria-label="Banner berikutnya">›</button>
+        <div class="slider-dots">@foreach($banners as $i => $banner)<button class="{{ $loop->first ? 'active' : '' }}" data-slide="{{ $i }}" aria-label="Banner {{ $loop->iteration }}"></button>@endforeach</div>
+    @endif
 </section>
 <section class="category-strip"><div class="site-container category-list">
-    @foreach($categories as $i => $category)<a href="{{ route('catalog', ['category' => $category->slug]) }}" class="category-item"><span class="category-icon icon-shape-{{ ($i % 4)+1 }}"></span><span>{{ $category->name }}</span></a>@endforeach
+    @foreach($categories as $i => $category)<a href="{{ route('catalog', ['kategori' => $category->slug]) }}" class="category-item"><span class="category-icon icon-shape-{{ ($i % 4)+1 }}"></span><span>{{ $category->name }}</span></a>@endforeach
 </div></section>
 <section class="page-section"><div class="site-container"><div class="section-heading"><div><p class="eyebrow blue">Pilihan populer</p><h2>Produk unggulan</h2></div><a href="{{ route('catalog') }}">Lihat semua <span>→</span></a></div><div class="product-grid">@foreach($products->take(4) as $product) @include('partials.product-card', ['product'=>$product]) @endforeach</div></div></section>
 <section class="promo-band"><div class="site-container promo-band-grid"><div class="promo-poster"><small>DMT PRINT</small><strong>CETAK<br>UNTUK<br>USAHA</strong><span>Harga bersahabat</span></div><div><p class="eyebrow">Solusi UMKM</p><h2>Buat brand Anda tampil lebih profesional</h2><p>Siapkan kebutuhan promosi dan kemasan dengan pilihan bahan, ukuran, dan finishing yang fleksibel.</p><div class="benefit-row"><span><b>01</b>Konsultasi produk</span><span><b>02</b>Estimasi transparan</span><span><b>03</b>Pengerjaan terpantau</span></div><a href="{{ route('catalog') }}" class="button button-primary">Jelajahi Produk</a></div></div></section>

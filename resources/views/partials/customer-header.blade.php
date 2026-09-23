@@ -9,10 +9,11 @@
             <button aria-label="Cari"><span class="icon icon-search"></span></button>
         </form>
         <nav class="header-actions" aria-label="Tautan cepat">
-            @if(($siteSocial['show_instagram'] ?? false) && filled($siteSocial['instagram'] ?? null))<a href="{{ $siteSocial['instagram'] }}" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="social-dot">IG</a>@endif
-            @if(($siteSocial['show_tiktok'] ?? false) && filled($siteSocial['tiktok'] ?? null))<a href="{{ $siteSocial['tiktok'] }}" target="_blank" rel="noopener noreferrer" aria-label="TikTok" class="social-dot">TT</a>@endif
             <a href="{{ route('orders.track') }}" class="track-link"><span class="icon icon-receipt"></span>Cek Pesanan</a>
-            <a href="{{ route('cart') }}" class="cart-link"><span class="icon icon-cart"></span><span class="cart-count">2</span></a>
+            <a href="{{ route('cart') }}" class="cart-link" aria-label="Keranjang">
+                <img src="{{ asset('images/icons/cart.svg') }}" alt="" class="cart-icon">
+                @if(($cartQuantity ?? 0) > 0)<span class="cart-count">{{ $cartQuantity }}</span>@endif
+            </a>
         </nav>
         <button class="mobile-menu-button" type="button" aria-label="Buka menu" aria-expanded="false" data-menu-toggle><span></span><span></span><span></span></button>
     </div>
@@ -20,10 +21,11 @@
         <div class="site-container category-nav-inner">
             <a href="{{ route('home') }}">Beranda</a>
             <a href="{{ route('catalog') }}">Katalog</a>
-            @foreach(($categories ?? ['Stiker','Banner','Kartu Nama','Brosur','Merchandise']) as $category)
-                <a href="{{ route('catalog', ['category' => is_string($category) ? $category : $category->slug]) }}">{{ is_string($category) ? $category : $category->name }}</a>
+            @foreach(($categories ?? collect()) as $category)
+                <a href="{{ route('catalog', ['kategori' => $category->slug]) }}" @class(['active' => isset($activeCategory) && $activeCategory?->is($category)])>{{ $category->name }}</a>
             @endforeach
             <a href="{{ route('orders.track') }}" class="mobile-only">Cek Pesanan</a>
+            <a href="{{ route('cart') }}" class="mobile-only">Keranjang @if(($cartQuantity ?? 0) > 0)<b>({{ $cartQuantity }})</b>@endif</a>
         </div>
     </div>
 </header>
