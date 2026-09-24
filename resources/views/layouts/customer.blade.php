@@ -6,6 +6,8 @@
     <meta name="description" content="DMT Print - layanan digital printing cepat dan berkualitas.">
     <title>@yield('title', 'DMT Print')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('favicon.png') }}">
 </head>
 <body class="customer-body">
     @include('partials.customer-header')
