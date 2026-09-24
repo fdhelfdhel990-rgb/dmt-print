@@ -4,6 +4,7 @@ namespace App\Database\Connectors;
 
 use Exception;
 use Illuminate\Database\Connectors\MySqlConnector;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PDO;
 use Throwable;
@@ -30,12 +31,19 @@ class TransientMySqlConnector extends MySqlConnector
 
         for ($attempt = 1; $attempt <= self::MAX_ATTEMPTS; $attempt++) {
             try {
-                return $this->createPdoConnection($dsn, $username, $password, $options);
+                $connection = $this->createPdoConnection($dsn, $username, $password, $options);
+
+                if ($attempt > 1) {
+                    $this->logConnectionRecovered($attempt);
+                }
+
+                return $connection;
             } catch (Exception $exception) {
                 if (! $this->shouldRetryConnection($exception, $attempt)) {
                     throw $exception;
                 }
 
+                $this->logTransientConnectionFailure($attempt);
                 $this->backoffBeforeRetry($attempt);
             }
         }
@@ -76,5 +84,21 @@ class TransientMySqlConnector extends MySqlConnector
     protected function retryBackoffMicroseconds(): array
     {
         return [250_000, 750_000];
+    }
+
+    protected function logTransientConnectionFailure(int $attempt): void
+    {
+        Log::warning('[DB-CONNECT-RETRY] transient connection failure', [
+            'attempt' => $attempt,
+            'max_attempts' => self::MAX_ATTEMPTS,
+        ]);
+    }
+
+    protected function logConnectionRecovered(int $attempt): void
+    {
+        Log::info('[DB-CONNECT-RETRY] connection recovered', [
+            'attempt' => $attempt,
+            'max_attempts' => self::MAX_ATTEMPTS,
+        ]);
     }
 }

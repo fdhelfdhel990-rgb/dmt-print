@@ -25,6 +25,18 @@ class TransientMySqlConnectorTest extends TestCase
         $this->assertSame($pdo, $connection);
         $this->assertSame(2, $connector->attempts);
         $this->assertSame(1, $connector->backoffs);
+        $this->assertSame([
+            [
+                'level' => 'warning',
+                'message' => '[DB-CONNECT-RETRY] transient connection failure',
+                'context' => ['attempt' => 1, 'max_attempts' => 3],
+            ],
+            [
+                'level' => 'info',
+                'message' => '[DB-CONNECT-RETRY] connection recovered',
+                'context' => ['attempt' => 2, 'max_attempts' => 3],
+            ],
+        ], $connector->logs);
     }
 
     public function test_non_transient_connection_exception_is_not_retried(): void
@@ -44,6 +56,7 @@ class TransientMySqlConnectorTest extends TestCase
         } finally {
             $this->assertSame(1, $connector->attempts);
             $this->assertSame(0, $connector->backoffs);
+            $this->assertSame([], $connector->logs);
         }
     }
 
@@ -66,6 +79,18 @@ class TransientMySqlConnectorTest extends TestCase
         } finally {
             $this->assertSame(3, $connector->attempts);
             $this->assertSame(2, $connector->backoffs);
+            $this->assertSame([
+                [
+                    'level' => 'warning',
+                    'message' => '[DB-CONNECT-RETRY] transient connection failure',
+                    'context' => ['attempt' => 1, 'max_attempts' => 3],
+                ],
+                [
+                    'level' => 'warning',
+                    'message' => '[DB-CONNECT-RETRY] transient connection failure',
+                    'context' => ['attempt' => 2, 'max_attempts' => 3],
+                ],
+            ], $connector->logs);
         }
     }
 
@@ -87,6 +112,29 @@ class TransientMySqlConnectorTest extends TestCase
 
         $this->assertSame($pdo, $connection);
     }
+
+    public function test_credentials_are_not_written_to_retry_logs(): void
+    {
+        $pdo = $this->createMock(PDO::class);
+        $connector = new FakeTransientMySqlConnector([
+            new PDOException('SQLSTATE[HY000] [2002] php_network_getaddresses: getaddrinfo for mysql.example failed: Name or service not known'),
+            $pdo,
+        ]);
+
+        $connector->createConnection('mysql:host=mysql.example;dbname=secret_database', [
+            'username' => 'secret_user',
+            'password' => 'secret_password',
+        ], []);
+
+        $logs = json_encode($connector->logs);
+
+        $this->assertIsString($logs);
+        $this->assertStringNotContainsString('secret_user', $logs);
+        $this->assertStringNotContainsString('secret_password', $logs);
+        $this->assertStringNotContainsString('secret_database', $logs);
+        $this->assertStringNotContainsString('mysql.example', $logs);
+        $this->assertStringNotContainsString('php_network_getaddresses', $logs);
+    }
 }
 
 class FakeTransientMySqlConnector extends TransientMySqlConnector
@@ -94,6 +142,11 @@ class FakeTransientMySqlConnector extends TransientMySqlConnector
     public int $attempts = 0;
 
     public int $backoffs = 0;
+
+    /**
+     * @var array<int, array{level: string, message: string, context: array<string, int>}>
+     */
+    public array $logs = [];
 
     /**
      * @param  array<int, PDO|PDOException>  $results
@@ -118,5 +171,23 @@ class FakeTransientMySqlConnector extends TransientMySqlConnector
         $this->backoffs++;
 
         return [0, 0];
+    }
+
+    protected function logTransientConnectionFailure(int $attempt): void
+    {
+        $this->logs[] = [
+            'level' => 'warning',
+            'message' => '[DB-CONNECT-RETRY] transient connection failure',
+            'context' => ['attempt' => $attempt, 'max_attempts' => 3],
+        ];
+    }
+
+    protected function logConnectionRecovered(int $attempt): void
+    {
+        $this->logs[] = [
+            'level' => 'info',
+            'message' => '[DB-CONNECT-RETRY] connection recovered',
+            'context' => ['attempt' => $attempt, 'max_attempts' => 3],
+        ];
     }
 }
