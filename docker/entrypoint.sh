@@ -4,8 +4,10 @@ set -e
 # Configure port for Nginx
 export PORT="${PORT:-8080}"
 if [ -f /etc/nginx/templates/default.conf.template ]; then
-    mkdir -p /etc/nginx/http.d
-    sed "s/\${PORT}/${PORT}/g" /etc/nginx/templates/default.conf.template > /etc/nginx/http.d/default.conf
+    mkdir -p /etc/nginx/http.d /etc/nginx/conf.d /etc/nginx/sites-enabled
+    rm -f /etc/nginx/sites-enabled/default
+    sed "s/\${PORT}/${PORT}/g" /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
+    cp /etc/nginx/conf.d/default.conf /etc/nginx/http.d/default.conf 2>/dev/null || true
 fi
 
 # Ensure storage and bootstrap/cache directories exist

@@ -27,31 +27,22 @@ COPY public ./public
 
 RUN npm run build
 
-# Stage 3: Production Runtime (PHP 8.4 + Nginx + Supervisor)
-FROM php:8.4-fpm-alpine AS production-runtime
+# Stage 3: Production Runtime (PHP 8.4 + Nginx + Supervisor on Debian Bookworm)
+FROM php:8.4-fpm-bookworm AS production-runtime
 
 # Install system dependencies, Nginx, Supervisor, CA certificates, and runtime libraries
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
     bash \
     curl \
     ca-certificates \
-    libzip \
-    libpng \
-    libjpeg-turbo \
-    freetype \
-    icu-libs \
-    oniguruma \
-    libxml2 \
-    && apk add --no-cache --virtual .build-deps \
-    curl-dev \
     libzip-dev \
     libpng-dev \
-    libjpeg-turbo-dev \
-    freetype-dev \
-    icu-dev \
-    oniguruma-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
+    libicu-dev \
+    libonig-dev \
     libxml2-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
@@ -67,7 +58,8 @@ RUN apk add --no-cache \
         opcache \
         gd \
         intl \
-    && apk del .build-deps
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /var/www/html
