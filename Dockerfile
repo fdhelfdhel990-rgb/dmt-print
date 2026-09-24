@@ -37,6 +37,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     curl \
     ca-certificates \
+    libcurl4-openssl-dev \
     libzip-dev \
     libpng-dev \
     libjpeg62-turbo-dev \
