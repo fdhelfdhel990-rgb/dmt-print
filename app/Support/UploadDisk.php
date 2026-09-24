@@ -50,25 +50,55 @@ class UploadDisk
         return true;
     }
 
-    public static function normalizePath(mixed $path): ?string
+    public static function cleanPath(mixed $path, ?string $disk = null): ?string
     {
         if (! self::isValidPath($path)) {
             return null;
         }
 
-        return trim((string) $path);
+        $cleaned = ltrim(trim((string) $path), '/');
+        $resolvedDisk = self::resolve($disk, self::public());
+
+        $knownBuckets = array_filter(array_unique([
+            (string) config("filesystems.disks.{$resolvedDisk}.bucket"),
+            (string) config('filesystems.disks.public_uploads.bucket'),
+            (string) env('PUBLIC_AWS_BUCKET'),
+            (string) env('AWS_BUCKET'),
+            'dmt-print-public',
+        ]), fn ($b) => trim($b) !== '');
+
+        $patterns = ['public', 'storage'];
+        foreach ($knownBuckets as $bucket) {
+            $patterns[] = preg_quote(trim($bucket, '/'), '#');
+        }
+
+        $regex = '#^('.implode('|', $patterns).')/+#i';
+
+        while (preg_match($regex, $cleaned)) {
+            $cleaned = preg_replace($regex, '', $cleaned);
+            $cleaned = ltrim($cleaned, '/');
+        }
+
+        return filled($cleaned) ? $cleaned : null;
+    }
+
+    public static function normalizePath(mixed $path, ?string $disk = null): ?string
+    {
+        return self::cleanPath($path, $disk);
     }
 
     public static function publicUrl(mixed $path, ?string $disk = null, ?string $placeholder = null): ?string
     {
-        $normalized = self::normalizePath($path);
-
-        if ($normalized === null) {
+        if (! self::isValidPath($path)) {
             return $placeholder;
         }
 
-        if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
-            return $normalized;
+        $raw = trim((string) $path);
+
+        if (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://')) {
+            $cleanedUrl = preg_replace('#^(https?://[^/]+)/(?:dmt-print-public/)+(.*)$#i', '$1/$2', $raw);
+
+            return $cleanedUrl ?: $placeholder;
         }
 
         $resolvedDisk = self::resolve($disk, self::public());
@@ -77,16 +107,46 @@ class UploadDisk
             return $placeholder;
         }
 
-        $publicBucket = config("filesystems.disks.{$resolvedDisk}.bucket") ?: config('filesystems.disks.public_uploads.bucket');
-        $bucketPattern = filled($publicBucket) ? preg_quote((string) $publicBucket, '#').'/|' : '';
-        $cleaned = preg_replace('#^('.$bucketPattern.'public/|storage/)+#i', '', ltrim($normalized, '/'));
+        $cleaned = self::cleanPath($raw, $resolvedDisk);
 
         if (! filled($cleaned)) {
             return $placeholder;
         }
 
+        $diskConfig = config("filesystems.disks.{$resolvedDisk}", []);
+        $driver = $diskConfig['driver'] ?? 'local';
+        $configuredUrl = $diskConfig['url'] ?? env('PUBLIC_AWS_URL') ?? env('AWS_URL');
+
+        if (filled($configuredUrl)) {
+            $base = rtrim((string) $configuredUrl, '/');
+            $knownBuckets = array_filter(array_unique([
+                (string) ($diskConfig['bucket'] ?? ''),
+                (string) config('filesystems.disks.public_uploads.bucket'),
+                (string) env('PUBLIC_AWS_BUCKET'),
+                (string) env('AWS_BUCKET'),
+                'dmt-print-public',
+            ]), fn ($b) => trim($b) !== '');
+
+            foreach ($knownBuckets as $bucket) {
+                $bSuffix = '/'.trim($bucket, '/');
+                if (str_ends_with($base, $bSuffix)) {
+                    $base = substr($base, 0, -strlen($bSuffix));
+                }
+            }
+
+            return $base.'/'.$cleaned;
+        }
+
+        if ($driver === 'local') {
+            $appUrl = rtrim(config('app.url', env('APP_URL', 'http://localhost')), '/');
+
+            return $appUrl.'/storage/'.$cleaned;
+        }
+
         try {
-            return Storage::disk($resolvedDisk)->url($cleaned);
+            $url = Storage::disk($resolvedDisk)->url($cleaned);
+
+            return preg_replace('#^(https?://[^/]+)/(?:dmt-print-public/)+(.*)$#i', '$1/$2', $url);
         } catch (Throwable) {
             return $placeholder;
         }

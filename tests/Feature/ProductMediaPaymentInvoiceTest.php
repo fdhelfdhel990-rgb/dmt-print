@@ -234,6 +234,83 @@ class ProductMediaPaymentInvoiceTest extends TestCase
         $this->assertSame('https://pub-cdn.r2.dev/'.$productPath, $legacyUrl);
     }
 
+    public function test_explicit_regression_for_r2_public_media_urls_without_bucket_prefix(): void
+    {
+        config([
+            'filesystems.disks.public_uploads.driver' => 's3',
+            'filesystems.disks.public_uploads.bucket' => 'dmt-print-public',
+            'filesystems.disks.public_uploads.root' => '',
+            'filesystems.disks.public_uploads.endpoint' => 'https://account-id.r2.cloudflarestorage.com',
+            'filesystems.disks.public_uploads.url' => 'https://pub-example.r2.dev',
+        ]);
+        Storage::forgetDisk('public_uploads');
+
+        $inputs = [
+            'products/test.jpg',
+            'dmt-print-public/products/test.jpg',
+            '/dmt-print-public/products/test.jpg',
+            'storage/products/test.jpg',
+            'public/products/test.jpg',
+            '/storage/dmt-print-public/products/test.jpg',
+            'https://pub-example.r2.dev/dmt-print-public/products/test.jpg',
+        ];
+
+        foreach ($inputs as $input) {
+            $url = UploadDisk::publicUrl($input);
+            $this->assertSame('https://pub-example.r2.dev/products/test.jpg', $url, "Failed for input: {$input}");
+            $this->assertStringNotContainsString('.r2.dev/dmt-print-public/', $url);
+            $this->assertStringNotContainsString('dmt-print-public', $url);
+        }
+
+        // Banners
+        $bannerInputs = [
+            'banners/test.jpg',
+            'dmt-print-public/banners/test.jpg',
+            '/dmt-print-public/banners/test.jpg',
+        ];
+        foreach ($bannerInputs as $input) {
+            $url = UploadDisk::publicUrl($input);
+            $this->assertSame('https://pub-example.r2.dev/banners/test.jpg', $url, "Failed banner input: {$input}");
+            $this->assertStringNotContainsString('.r2.dev/dmt-print-public/', $url);
+
+            $banner = Banner::factory()->make(['image_path' => $input]);
+            $this->assertSame('https://pub-example.r2.dev/banners/test.jpg', $banner->imageUrl());
+            $this->assertStringNotContainsString('.r2.dev/dmt-print-public/', $banner->imageUrl());
+        }
+
+        // Categories
+        $categoryInputs = [
+            'categories/test.jpg',
+            'dmt-print-public/categories/test.jpg',
+            '/dmt-print-public/categories/test.jpg',
+        ];
+        foreach ($categoryInputs as $input) {
+            $url = UploadDisk::publicUrl($input);
+            $this->assertSame('https://pub-example.r2.dev/categories/test.jpg', $url, "Failed category input: {$input}");
+            $this->assertStringNotContainsString('.r2.dev/dmt-print-public/', $url);
+
+            $category = Category::factory()->make(['image_path' => $input]);
+            $this->assertSame('https://pub-example.r2.dev/categories/test.jpg', $category->imageUrl());
+            $this->assertStringNotContainsString('.r2.dev/dmt-print-public/', $category->imageUrl());
+        }
+
+        // Payment Methods
+        $paymentInputs = [
+            'payment-methods/qris.jpg',
+            'dmt-print-public/payment-methods/qris.jpg',
+            '/dmt-print-public/payment-methods/qris.jpg',
+        ];
+        foreach ($paymentInputs as $input) {
+            $url = UploadDisk::publicUrl($input);
+            $this->assertSame('https://pub-example.r2.dev/payment-methods/qris.jpg', $url, "Failed payment method input: {$input}");
+            $this->assertStringNotContainsString('.r2.dev/dmt-print-public/', $url);
+
+            $paymentMethod = PaymentMethod::factory()->make(['image_path' => $input]);
+            $this->assertSame('https://pub-example.r2.dev/payment-methods/qris.jpg', $paymentMethod->imageUrl());
+            $this->assertStringNotContainsString('.r2.dev/dmt-print-public/', $paymentMethod->imageUrl());
+        }
+    }
+
     public function test_private_media_disks_do_not_produce_public_urls(): void
     {
         $this->assertNull(UploadDisk::publicUrl('order-designs/token/design.pdf', 'private_uploads'));

@@ -51,6 +51,23 @@ return [
             return $trimmed;
         };
 
+        $sanitizeUrl = static function (?string $url, ?string $bucket): ?string {
+            if (! is_string($url) || trim($url) === '') {
+                return null;
+            }
+
+            $trimmed = rtrim(trim($url), '/');
+
+            if (is_string($bucket) && trim($bucket) !== '') {
+                $bucketSuffix = '/'.trim($bucket, '/');
+                if (str_ends_with($trimmed, $bucketSuffix)) {
+                    return substr($trimmed, 0, -strlen($bucketSuffix));
+                }
+            }
+
+            return $trimmed;
+        };
+
         return [
 
             'local' => [
@@ -83,7 +100,7 @@ return [
                 'root' => env('PUBLIC_FILESYSTEM_DRIVER', 'local') === 'local' ? storage_path('app/public') : '',
                 'url' => env('PUBLIC_FILESYSTEM_DRIVER', 'local') === 'local'
                     ? rtrim(env('APP_URL', 'http://localhost'), '/').'/storage'
-                    : env('PUBLIC_AWS_URL', env('AWS_URL')),
+                    : $sanitizeUrl(env('PUBLIC_AWS_URL', env('AWS_URL')), env('PUBLIC_AWS_BUCKET', env('AWS_BUCKET'))),
                 'key' => env('PUBLIC_AWS_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID')),
                 'secret' => env('PUBLIC_AWS_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
                 'region' => env('PUBLIC_AWS_DEFAULT_REGION', env('AWS_DEFAULT_REGION', 'auto')),
@@ -103,7 +120,7 @@ return [
                 'root' => env('PUBLIC_FILESYSTEM_DRIVER', 'local') === 'local' ? storage_path('app/public') : '',
                 'url' => env('PUBLIC_FILESYSTEM_DRIVER', 'local') === 'local'
                     ? rtrim(env('APP_URL', 'http://localhost'), '/').'/storage'
-                    : env('PUBLIC_AWS_URL', env('AWS_URL')),
+                    : $sanitizeUrl(env('PUBLIC_AWS_URL', env('AWS_URL')), env('PUBLIC_AWS_BUCKET', env('AWS_BUCKET'))),
                 'key' => env('PUBLIC_AWS_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID')),
                 'secret' => env('PUBLIC_AWS_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
                 'region' => env('PUBLIC_AWS_DEFAULT_REGION', env('AWS_DEFAULT_REGION', 'auto')),
