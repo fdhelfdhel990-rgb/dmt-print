@@ -77,7 +77,9 @@ class UploadDisk
             return $placeholder;
         }
 
-        $cleaned = preg_replace('#^(public/|storage/)+#', '', ltrim($normalized, '/'));
+        $publicBucket = config("filesystems.disks.{$resolvedDisk}.bucket") ?: config('filesystems.disks.public_uploads.bucket');
+        $bucketPattern = filled($publicBucket) ? preg_quote((string) $publicBucket, '#').'/|' : '';
+        $cleaned = preg_replace('#^('.$bucketPattern.'public/|storage/)+#i', '', ltrim($normalized, '/'));
 
         if (! filled($cleaned)) {
             return $placeholder;

@@ -118,6 +118,122 @@ class ProductMediaPaymentInvoiceTest extends TestCase
         $this->assertStringNotContainsString('dmt-print-public', $url);
     }
 
+    public function test_filesystems_endpoint_sanitizer_removes_duplicate_bucket_suffix(): void
+    {
+        $config = require config_path('filesystems.php');
+        $this->assertIsArray($config);
+        $this->assertArrayHasKey('disks', $config);
+        $this->assertArrayHasKey('public_uploads', $config['disks']);
+
+        $originalEndpoint = getenv('PUBLIC_AWS_ENDPOINT');
+        $originalBucket = getenv('PUBLIC_AWS_BUCKET');
+
+        try {
+            // Test configuration resolution with duplicate bucket suffix
+            putenv('PUBLIC_AWS_ENDPOINT=https://account123.r2.cloudflarestorage.com/dmt-print-public');
+            putenv('PUBLIC_AWS_BUCKET=dmt-print-public');
+            $freshConfig = require config_path('filesystems.php');
+            $this->assertSame('https://account123.r2.cloudflarestorage.com', $freshConfig['disks']['public_uploads']['endpoint']);
+
+            // Test configuration resolution with clean endpoint
+            putenv('PUBLIC_AWS_ENDPOINT=https://account123.r2.cloudflarestorage.com');
+            $freshConfig = require config_path('filesystems.php');
+            $this->assertSame('https://account123.r2.cloudflarestorage.com', $freshConfig['disks']['public_uploads']['endpoint']);
+
+            // Test configuration resolution with trailing slash
+            putenv('PUBLIC_AWS_ENDPOINT=https://account123.r2.cloudflarestorage.com/');
+            $freshConfig = require config_path('filesystems.php');
+            $this->assertSame('https://account123.r2.cloudflarestorage.com', $freshConfig['disks']['public_uploads']['endpoint']);
+        } finally {
+            if ($originalEndpoint !== false && $originalEndpoint !== null) {
+                putenv("PUBLIC_AWS_ENDPOINT={$originalEndpoint}");
+                $_ENV['PUBLIC_AWS_ENDPOINT'] = $originalEndpoint;
+            } else {
+                putenv('PUBLIC_AWS_ENDPOINT=');
+                unset($_ENV['PUBLIC_AWS_ENDPOINT']);
+            }
+
+            if ($originalBucket !== false && $originalBucket !== null) {
+                putenv("PUBLIC_AWS_BUCKET={$originalBucket}");
+                $_ENV['PUBLIC_AWS_BUCKET'] = $originalBucket;
+            } else {
+                putenv('PUBLIC_AWS_BUCKET=');
+                unset($_ENV['PUBLIC_AWS_BUCKET']);
+            }
+        }
+    }
+
+    public function test_new_uploads_store_relative_paths_and_resolve_to_public_cdn_url(): void
+    {
+        Storage::fake('public_uploads');
+
+        // Simulate upload for product, banner, and category
+        $productFile = UploadedFile::fake()->create('brosur-baru.jpg', 20, 'image/jpeg');
+        $productPath = $productFile->store('products', 'public_uploads');
+
+        $bannerFile = UploadedFile::fake()->create('banner-promo.png', 30, 'image/png');
+        $bannerPath = $bannerFile->store('banners', 'public_uploads');
+
+        $categoryFile = UploadedFile::fake()->create('kategori-stiker.jpg', 15, 'image/jpeg');
+        $categoryPath = $categoryFile->store('categories', 'public_uploads');
+
+        // Path stored in DB must be: products/{filename}, banners/{filename}, categories/{filename}
+        $this->assertStringStartsWith('products/', $productPath);
+        $this->assertStringStartsNotWith('dmt-print-public/', $productPath);
+        $this->assertStringStartsNotWith('http', $productPath);
+
+        $this->assertStringStartsWith('banners/', $bannerPath);
+        $this->assertStringStartsNotWith('dmt-print-public/', $bannerPath);
+        $this->assertStringStartsNotWith('http', $bannerPath);
+
+        $this->assertStringStartsWith('categories/', $categoryPath);
+        $this->assertStringStartsNotWith('dmt-print-public/', $categoryPath);
+        $this->assertStringStartsNotWith('http', $categoryPath);
+
+        // Files must exist on disk
+        Storage::disk('public_uploads')->assertExists($productPath);
+        Storage::disk('public_uploads')->assertExists($bannerPath);
+        Storage::disk('public_uploads')->assertExists($categoryPath);
+
+        // Public URL resolution under S3 configuration (simulates production R2 env)
+        config([
+            'filesystems.disks.public_uploads.driver' => 's3',
+            'filesystems.disks.public_uploads.bucket' => 'dmt-print-public',
+            'filesystems.disks.public_uploads.root' => '',
+            'filesystems.disks.public_uploads.endpoint' => 'https://account-id.r2.cloudflarestorage.com',
+            'filesystems.disks.public_uploads.url' => 'https://pub-cdn.r2.dev',
+        ]);
+        Storage::forgetDisk('public_uploads');
+
+        $productUrl = UploadDisk::publicUrl($productPath);
+        $bannerUrl = UploadDisk::publicUrl($bannerPath);
+        $categoryUrl = UploadDisk::publicUrl($categoryPath);
+
+        // URL must use PUBLIC_AWS_URL, not S3 API endpoint
+        $this->assertSame('https://pub-cdn.r2.dev/'.$productPath, $productUrl);
+        $this->assertSame('https://pub-cdn.r2.dev/'.$bannerPath, $bannerUrl);
+        $this->assertSame('https://pub-cdn.r2.dev/'.$categoryPath, $categoryUrl);
+
+        $this->assertStringNotContainsString('cloudflarestorage.com', $productUrl);
+        $this->assertStringNotContainsString('dmt-print-public/', $productUrl);
+        $this->assertStringNotContainsString('cloudflarestorage.com', $bannerUrl);
+        $this->assertStringNotContainsString('cloudflarestorage.com', $categoryUrl);
+
+        // Models must also resolve using public CDN URL
+        $product = Product::factory()->create(['image_path' => $productPath]);
+        $this->assertSame('https://pub-cdn.r2.dev/'.$productPath, $product->imageUrl());
+
+        $banner = Banner::factory()->create(['image_path' => $bannerPath]);
+        $this->assertSame('https://pub-cdn.r2.dev/'.$bannerPath, $banner->imageUrl());
+
+        $category = Category::factory()->create(['image_path' => $categoryPath]);
+        $this->assertSame('https://pub-cdn.r2.dev/'.$categoryPath, $category->imageUrl());
+
+        // Legacy path with bucket prefix is safely normalized to CDN URL without duplicate bucket
+        $legacyUrl = UploadDisk::publicUrl('dmt-print-public/'.$productPath);
+        $this->assertSame('https://pub-cdn.r2.dev/'.$productPath, $legacyUrl);
+    }
+
     public function test_private_media_disks_do_not_produce_public_urls(): void
     {
         $this->assertNull(UploadDisk::publicUrl('order-designs/token/design.pdf', 'private_uploads'));

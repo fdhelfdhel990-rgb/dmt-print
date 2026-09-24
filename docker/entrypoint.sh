@@ -21,6 +21,11 @@ mkdir -p /var/www/html/storage/framework/cache/data \
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
+# Clear framework caches to guarantee fresh environment configuration on container start
+php /var/www/html/artisan config:clear || true
+php /var/www/html/artisan route:clear || true
+php /var/www/html/artisan view:clear || true
+
 # If custom command was passed, execute that; otherwise start supervisord
 if [ "$#" -gt 0 ]; then
     exec "$@"
