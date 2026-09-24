@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Database\Connectors\TransientMySqlConnector;
 use App\Models\SiteSetting;
 use App\Services\CartService;
 use Illuminate\Support\Facades\View;
@@ -14,7 +15,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind('db.connector.mysql', TransientMySqlConnector::class);
     }
 
     /**
