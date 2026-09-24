@@ -67,14 +67,24 @@ class UploadDisk
             return $placeholder;
         }
 
+        if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
+            return $normalized;
+        }
+
         $resolvedDisk = self::resolve($disk, self::public());
 
         if (! self::isPublic($resolvedDisk)) {
             return $placeholder;
         }
 
+        $cleaned = preg_replace('#^(public/|storage/)+#', '', ltrim($normalized, '/'));
+
+        if (! filled($cleaned)) {
+            return $placeholder;
+        }
+
         try {
-            return Storage::disk($resolvedDisk)->url($normalized);
+            return Storage::disk($resolvedDisk)->url($cleaned);
         } catch (Throwable) {
             return $placeholder;
         }

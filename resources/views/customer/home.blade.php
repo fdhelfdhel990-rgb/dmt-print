@@ -3,9 +3,33 @@
 @section('content')
 <section class="hero-slider" data-slider>
     @forelse($banners as $banner)
-    <article class="hero-slide {{ $loop->first ? 'active' : '' }}"><div class="site-container hero-grid"><div><p class="eyebrow">Cetak cepat & rapi</p><h1>{{ $banner->title }}</h1><p>{{ $banner->description }}</p>@if($banner->button_label)<a href="{{ $banner->button_url ?: route('catalog') }}" class="button button-yellow">{{ $banner->button_label }}</a>@endif</div><div class="hero-art">@if($banner->imageUrl())<img src="{{ $banner->imageUrl() }}" alt="{{ $banner->title }}">@else<span class="mock-phone">DMT<br><b>PRINT</b></span><span class="mock-box">Paket<br>Cetak</span>@endif</div></div></article>
+    <article class="hero-slide {{ $loop->first ? 'active' : '' }}">
+        <div class="site-container hero-slide-inner">
+            @if($banner->imageUrl())
+                <img src="{{ $banner->imageUrl() }}" alt="{{ $banner->title ?: 'Banner DMT Print' }}" class="hero-artwork-img" loading="{{ $loop->first ? 'eager' : 'lazy' }}">
+            @else
+                <div class="hero-art-fallback">
+                    <div class="hero-fallback-brand">
+                        <span class="hero-fallback-mark">d</span>
+                        <b>DMT PRINT</b>
+                        <small>{{ $banner->title ?: 'Digital Printing & Custom Merchandise' }}</small>
+                    </div>
+                </div>
+            @endif
+        </div>
+    </article>
     @empty
-    <article class="hero-slide active"><div class="site-container hero-grid"><div><p class="eyebrow">Cetak cepat & rapi</p><h1>Semua kebutuhan cetak dalam satu tempat</h1><p>Mulai dari stiker, banner, kartu nama, hingga merchandise custom untuk usaha dan acara Anda.</p><a href="{{ route('catalog') }}" class="button button-yellow">Lihat Katalog</a></div><div class="hero-art"><span class="mock-phone">DMT<br><b>PRINT</b></span><span class="mock-box">Paket<br>Cetak</span><span class="mock-card">PROMO<br><b>HEMAT</b></span></div></div></article>
+    <article class="hero-slide active">
+        <div class="site-container hero-slide-inner">
+            <div class="hero-art-fallback">
+                <div class="hero-fallback-brand">
+                    <span class="hero-fallback-mark">d</span>
+                    <b>DMT PRINT</b>
+                    <small>Semua kebutuhan cetak dalam satu tempat</small>
+                </div>
+            </div>
+        </div>
+    </article>
     @endforelse
     @if($banners->count() > 1)
         <button class="slider-arrow slider-prev" type="button" data-slide-prev aria-label="Banner sebelumnya">‹</button>

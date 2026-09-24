@@ -52,7 +52,7 @@ class StageFourAdminCmsTest extends TestCase
             'image' => UploadedFile::fake()->create('banner.jpg', 10, 'image/jpeg'),
         ])->assertRedirect();
 
-        $this->get(route('home'))->assertOk()->assertSee('Cetak kilat DMT')->assertSee('Pesan Sekarang');
+        $this->get(route('home'))->assertOk()->assertSee('Cetak kilat DMT');
         $this->assertDatabaseHas('banners', ['title' => 'Cetak kilat DMT']);
 
         $this->post(route('admin.admins.store'), [

@@ -54,8 +54,8 @@ class BannerController extends Controller
      */
     private function validated(Request $request, bool $imageRequired = true): array
     {
-        return $request->validate([
-            'title' => ['required', 'string', 'max:255'],
+        $data = $request->validate([
+            'title' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
             'button_label' => ['nullable', 'string', 'max:100'],
             'button_url' => ['nullable', 'string', 'max:500'],
@@ -63,6 +63,11 @@ class BannerController extends Controller
             'is_active' => ['nullable', 'boolean'],
             'image' => [$imageRequired ? 'required' : 'nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'mimetypes:image/jpeg,image/png,image/webp', 'max:4096'],
             'remove_image' => ['nullable', 'boolean'],
-        ], ['image.mimes' => 'Gambar harus berupa JPG, JPEG, PNG, atau WebP.', 'image.max' => 'Ukuran gambar maksimal 4 MB.']) + ['is_active' => $request->boolean('is_active')];
+        ], ['image.mimes' => 'Gambar harus berupa JPG, JPEG, PNG, atau WebP.', 'image.max' => 'Ukuran gambar maksimal 4 MB.']);
+
+        $data['title'] = $data['title'] ?: ('Banner '.((int) Banner::query()->max('id') + 1));
+        $data['is_active'] = $request->boolean('is_active');
+
+        return $data;
     }
 }
