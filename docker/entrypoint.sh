@@ -10,6 +10,8 @@ if [ -f /etc/nginx/templates/default.conf.template ]; then
     cp /etc/nginx/conf.d/default.conf /etc/nginx/http.d/default.conf 2>/dev/null || true
 fi
 
+echo "HTTP listen port: ${PORT}"
+
 # Ensure storage and bootstrap/cache directories exist
 mkdir -p /var/www/html/storage/framework/cache/data \
          /var/www/html/storage/framework/sessions \
@@ -32,5 +34,6 @@ php /var/www/html/artisan view:clear || true
 if [ "$#" -gt 0 ]; then
     exec "$@"
 else
+    echo "Starting nginx and php-fpm via supervisord"
     exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
 fi
