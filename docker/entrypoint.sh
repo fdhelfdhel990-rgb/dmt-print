@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-# Configure port for Nginx
+# Configure runtime port for Nginx
 export PORT="${PORT:-8080}"
 if [ -f /etc/nginx/templates/default.conf.template ]; then
     mkdir -p /etc/nginx/http.d /etc/nginx/conf.d /etc/nginx/sites-enabled
