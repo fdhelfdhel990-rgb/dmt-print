@@ -118,6 +118,34 @@ class ProductMediaPaymentInvoiceTest extends TestCase
         $this->assertStringNotContainsString('dmt-print-public', $url);
     }
 
+    public function test_r2_public_custom_domain_takes_precedence_for_media_urls(): void
+    {
+        config([
+            'filesystems.disks.public_uploads.driver' => 's3',
+            'filesystems.disks.public_uploads.bucket' => 'dmt-print-public',
+            'filesystems.disks.public_uploads.root' => '',
+            'filesystems.disks.public_uploads.url' => 'https://pub-legacy.r2.dev',
+        ]);
+        putenv('PUBLIC_AWS_PUBLIC_URL=https://media.dmtprint.com');
+        $_ENV['PUBLIC_AWS_PUBLIC_URL'] = 'https://media.dmtprint.com';
+        Storage::forgetDisk('public_uploads');
+
+        try {
+            $this->assertSame(
+                'https://media.dmtprint.com/banners/hero.jpg',
+                UploadDisk::publicUrl('banners/hero.jpg'),
+            );
+            $this->assertSame(
+                'https://media.dmtprint.com/products/legacy.jpg',
+                UploadDisk::publicUrl('https://pub-legacy.r2.dev/dmt-print-public/products/legacy.jpg'),
+            );
+        } finally {
+            putenv('PUBLIC_AWS_PUBLIC_URL');
+            unset($_ENV['PUBLIC_AWS_PUBLIC_URL']);
+            Storage::forgetDisk('public_uploads');
+        }
+    }
+
     public function test_filesystems_endpoint_sanitizer_removes_duplicate_bucket_suffix(): void
     {
         $config = require config_path('filesystems.php');

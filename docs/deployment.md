@@ -37,6 +37,8 @@ php artisan storage:link
 
 For R2/S3-compatible storage, set the public and private disk driver to `s3` and fill only environment credentials. Use separate buckets or prefixes for public and private files when possible. Do not make payment proofs or customer designs public.
 
+For public R2 media, use `PUBLIC_AWS_ENDPOINT` for the S3 API endpoint and `PUBLIC_AWS_PUBLIC_URL` for the HTTPS serving domain. In production, attach a custom domain to the public R2 bucket in Cloudflare and set `PUBLIC_AWS_PUBLIC_URL` to that domain after its certificate is active. `PUBLIC_AWS_URL` remains as a fallback for existing deployments using an `r2.dev` URL.
+
 ## Deployment Commands
 
 ```bash
