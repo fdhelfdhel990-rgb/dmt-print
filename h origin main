@@ -1,0 +1,23 @@
+[1mdiff --git a/docker/default.conf.template b/docker/default.conf.template[m
+[1mindex cdbefd1..4fb542b 100644[m
+[1m--- a/docker/default.conf.template[m
+[1m+++ b/docker/default.conf.template[m
+[36m@@ -1,4 +1,5 @@[m
+ server {[m
+[32m+[m[32m    # Railway provides PORT at runtime; bind Nginx on all interfaces.[m
+     listen 0.0.0.0:${PORT};[m
+     listen [::]:${PORT};[m
+     server_name _;[m
+[1mdiff --git a/docker/entrypoint.sh b/docker/entrypoint.sh[m
+[1mindex 0391f1d..5c64cd6 100644[m
+[1m--- a/docker/entrypoint.sh[m
+[1m+++ b/docker/entrypoint.sh[m
+[36m@@ -1,7 +1,7 @@[m
+ #!/bin/sh[m
+ set -e[m
+ [m
+[31m-# Configure port for Nginx[m
+[32m+[m[32m# Configure runtime port for Nginx[m
+ export PORT="${PORT:-8080}"[m
+ if [ -f /etc/nginx/templates/default.conf.template ]; then[m
+     mkdir -p /etc/nginx/http.d /etc/nginx/conf.d /etc/nginx/sites-enabled[m
