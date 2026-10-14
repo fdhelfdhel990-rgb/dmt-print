@@ -46,6 +46,7 @@ Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('thro
 Route::get('/pesanan/selesai/{order:public_token}', [CheckoutController::class, 'success'])->name('orders.success');
 Route::get('/cek-pesanan', [OrderTrackingController::class, 'create'])->name('orders.track');
 Route::get('/status-pesanan', [OrderTrackingController::class, 'show'])->middleware('throttle:30,1')->name('orders.status');
+Route::post('/status-pesanan', [OrderTrackingController::class, 'show'])->middleware('throttle:30,1')->name('orders.status.lookup');
 Route::post('/pesanan/{order}/setujui', [OrderTrackingController::class, 'approve'])->middleware('throttle:10,1')->name('orders.approve');
 Route::post('/pesanan/{order}/revisi', [OrderTrackingController::class, 'revise'])->middleware('throttle:10,1')->name('orders.revise');
 Route::post('/pesanan/{order}/pembayaran', [OrderTrackingController::class, 'payment'])->middleware('throttle:10,1')->name('orders.payment');

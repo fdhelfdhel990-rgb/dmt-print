@@ -239,6 +239,53 @@ class OrderingWorkflowTest extends TestCase
             ->assertDontSee('QRIS DMT');
     }
 
+    public function test_customer_order_changes_require_a_verified_order_in_the_session(): void
+    {
+        $order = Order::factory()->create([
+            'status' => 'waiting_customer_approval',
+            'final_total' => 100000,
+        ]);
+
+        $this->post(route('orders.approve', $order), ['payment_scheme' => 'full'])->assertNotFound();
+        $this->post(route('orders.revise', $order), ['revision_note' => 'Mohon ubah desain'])->assertNotFound();
+        $this->post(route('orders.payment', $order), [
+            'method' => 'bank_transfer',
+            'payment_type' => 'full',
+        ])->assertNotFound();
+
+        $this->get(route('orders.status', [
+            'order_number' => $order->order_number,
+            'phone' => $order->customer->phone,
+        ]))->assertOk();
+
+        $this->post(route('orders.approve', $order), ['payment_scheme' => 'full'])
+            ->assertRedirect()
+            ->assertSessionHas('status', 'Harga disetujui. Silakan lanjutkan pembayaran.');
+
+        $this->assertSame('waiting_payment', $order->refresh()->status);
+        $this->post(route('orders.revise', $order), ['revision_note' => 'Ubah desain'])->assertNotFound();
+    }
+
+    public function test_order_tracking_keeps_the_whatsapp_number_out_of_the_redirect_url(): void
+    {
+        $order = Order::factory()->create(['status' => 'waiting_customer_approval']);
+
+        $this->get(route('orders.track'))
+            ->assertOk()
+            ->assertSee('method="POST"', false)
+            ->assertSee('autocomplete="tel"', false);
+
+        $this->post(route('orders.status.lookup'), [
+            'order_number' => $order->order_number,
+            'phone' => $order->customer->phone,
+        ])->assertRedirect(route('orders.status', ['order_number' => $order->order_number]))
+            ->assertSessionHas('verified_order_id', $order->getKey());
+
+        $this->get(route('orders.status', ['order_number' => $order->order_number]))
+            ->assertOk()
+            ->assertSee($order->order_number);
+    }
+
     public function test_empty_cart_is_rejected_and_validation_returns_to_checkout(): void
     {
         $this->post(route('checkout.store'), [

@@ -22,6 +22,16 @@ class OrderTrackingController extends Controller
             return view('customer.track');
         }
 
+        if ($request->isMethod('get') && $request->filled('order_number') && ! $request->filled('phone')) {
+            $order = Order::query()
+                ->where('order_number', $request->string('order_number')->toString())
+                ->firstOrFail();
+
+            abort_unless($request->session()->get('verified_order_id') === $order->getKey(), 404);
+
+            return $this->statusView($order);
+        }
+
         $validated = $request->validate([
             'order_number' => ['required', 'string'],
             'phone' => ['required', 'string'],
@@ -37,14 +47,19 @@ class OrderTrackingController extends Controller
             return back()->withInput()->withErrors(['order_number' => 'Pesanan tidak ditemukan untuk kode dan nomor WhatsApp tersebut.']);
         }
 
-        return view('customer.order-status', [
-            'order' => $order,
-            'paymentMethods' => PaymentMethod::query()->where('is_active', true)->orderBy('sort_order')->get()->filter->isAvailableForCustomer()->values(),
-        ]);
+        $request->session()->put('verified_order_id', $order->getKey());
+
+        if ($request->isMethod('post')) {
+            return redirect()->route('orders.status', ['order_number' => $order->order_number]);
+        }
+
+        return $this->statusView($order);
     }
 
     public function approve(Request $request, Order $order): RedirectResponse
     {
+        $this->ensureCustomerVerifiedOrder($request, $order);
+        abort_unless($order->status === 'waiting_customer_approval', 404);
         $request->validate(['payment_scheme' => ['required', 'in:down_payment,full']]);
         $order->update(['status' => 'waiting_payment', 'payment_scheme' => $request->string('payment_scheme'), 'customer_approved_at' => now(), 'revision_requested_at' => null]);
         $order->statusHistories()->create(['status' => 'waiting_payment', 'note' => 'Pelanggan menyetujui harga final.']);
@@ -55,6 +70,8 @@ class OrderTrackingController extends Controller
 
     public function revise(Request $request, Order $order): RedirectResponse
     {
+        $this->ensureCustomerVerifiedOrder($request, $order);
+        abort_unless($order->status === 'waiting_customer_approval', 404);
         $validated = $request->validate(['revision_note' => ['required', 'string', 'max:1000']]);
         $order->update(['status' => 'revision_requested', 'revision_requested_at' => now(), 'customer_note' => trim(($order->customer_note ? $order->customer_note."\n\n" : '').'Revisi: '.$validated['revision_note'])]);
         $order->statusHistories()->create(['status' => 'revision_requested', 'note' => $validated['revision_note']]);
@@ -65,6 +82,7 @@ class OrderTrackingController extends Controller
 
     public function payment(Request $request, Order $order, RecordPaymentAction $action): RedirectResponse
     {
+        $this->ensureCustomerVerifiedOrder($request, $order);
         $remaining = max(0, (int) $order->final_total - (int) $order->amount_paid);
         $minimumDownPayment = (int) ceil(((int) $order->final_total) / 2);
         $validated = $request->validate([
@@ -94,5 +112,18 @@ class OrderTrackingController extends Controller
         $digits = preg_replace('/\D+/', '', $phone) ?: '';
 
         return str_starts_with($digits, '0') ? '62'.substr($digits, 1) : (str_starts_with($digits, '62') ? $digits : '62'.$digits);
+    }
+
+    private function ensureCustomerVerifiedOrder(Request $request, Order $order): void
+    {
+        abort_unless($request->session()->get('verified_order_id') === $order->getKey(), 404);
+    }
+
+    private function statusView(Order $order): View
+    {
+        return view('customer.order-status', [
+            'order' => $order->loadMissing('customer', 'items.options', 'items.product', 'payments', 'statusHistories'),
+            'paymentMethods' => PaymentMethod::query()->where('is_active', true)->orderBy('sort_order')->get()->filter->isAvailableForCustomer()->values(),
+        ]);
     }
 }

@@ -37,6 +37,7 @@ class CheckoutController extends Controller
         }
 
         $cart->clear();
+        $request->session()->put('verified_order_id', $order->getKey());
 
         return redirect()->route('orders.success', ['order' => $order->public_token]);
     }

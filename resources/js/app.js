@@ -1,4 +1,19 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const fulfillmentOptions = [...document.querySelectorAll('[data-fulfillment-option]')];
+    const shippingFields = document.querySelector('[data-shipping-fields]');
+    if (fulfillmentOptions.length > 0 && shippingFields) {
+        const updateShippingFields = () => {
+            const needsShipping = fulfillmentOptions.some((option) => option.checked && option.value === 'shipping');
+            shippingFields.hidden = !needsShipping;
+            shippingFields.querySelectorAll('input, textarea, select').forEach((field) => {
+                field.disabled = !needsShipping;
+            });
+        };
+
+        fulfillmentOptions.forEach((option) => option.addEventListener('change', updateShippingFields));
+        updateShippingFields();
+    }
+
     const mobileButton = document.querySelector('[data-menu-toggle]');
     const mobileMenu = document.querySelector('[data-mobile-menu]');
     mobileButton?.addEventListener('click', () => {
