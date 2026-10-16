@@ -152,4 +152,32 @@ class OrderController extends Controller
 
         return back()->with('status', 'Pesanan dipulihkan.');
     }
+
+    public function destroy(Order $order): RedirectResponse
+    {
+        $order->loadMissing('items.files', 'payments');
+
+        foreach ($order->items as $item) {
+            foreach ($item->files as $file) {
+                if ($file->path) {
+                    $disk = UploadDisk::resolve($file->disk, UploadDisk::private());
+                    Storage::disk($disk)->delete($file->path);
+                }
+            }
+        }
+
+        foreach ($order->payments as $payment) {
+            if ($payment->proof_path) {
+                $disk = UploadDisk::resolve($payment->proof_disk, UploadDisk::private());
+                Storage::disk($disk)->delete($payment->proof_path);
+            }
+        }
+
+        $orderNumber = $order->order_number;
+        $order->activityLogs()->delete();
+        $order->cashbookEntries()->delete();
+        $order->delete();
+
+        return redirect()->route('admin.orders')->with('status', 'Pesanan '.$orderNumber.' dan seluruh file lampirannya berhasil dihapus permanen.');
+    }
 }

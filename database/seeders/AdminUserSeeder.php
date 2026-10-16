@@ -27,6 +27,8 @@ class AdminUserSeeder extends Seeder
                 'name' => config('dmt.admin.name', 'Owner Admin'),
                 'password' => $password,
                 'is_admin' => true,
+                'role' => 'admin',
+                'is_active' => true,
                 'email_verified_at' => now(),
             ],
         );

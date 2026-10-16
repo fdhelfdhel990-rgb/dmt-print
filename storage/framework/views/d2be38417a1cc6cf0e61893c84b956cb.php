@@ -1,0 +1,2 @@
+<div class="admin-page-header"><div><p class="admin-eyebrow"><?php echo $__env->yieldContent('section-label','Operasional'); ?></p><h1><?php echo $__env->yieldContent('page-title'); ?></h1><p><?php echo $__env->yieldContent('page-description'); ?></p></div><?php if (! empty(trim($__env->yieldContent('page-action')))): ?><div><?php echo $__env->yieldContent('page-action'); ?></div><?php endif; ?></div>
+<?php /**PATH D:\WEB\Laravel\print\dmt\resources\views/partials/admin-page-header.blade.php ENDPATH**/ ?>

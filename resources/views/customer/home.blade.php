@@ -5,15 +5,23 @@
     @forelse($banners as $banner)
     <article class="hero-slide {{ $loop->first ? 'active' : '' }}">
         <div class="site-container hero-slide-inner">
-            <div class="hero-art-fallback">
-                <div class="hero-fallback-brand">
-                    <span class="hero-fallback-mark">d</span>
-                    <b>DMT PRINT</b>
-                    <small>{{ $banner->title ?: 'Digital Printing & Custom Merchandise' }}</small>
-                </div>
-            </div>
             @if($banner->imageUrl())
-                <img src="{{ $banner->imageUrl() }}" alt="{{ $banner->title ?: 'Banner DMT Print' }}" class="hero-artwork-img" loading="{{ $loop->first ? 'eager' : 'lazy' }}" onerror="this.remove()">
+                <img src="{{ $banner->imageUrl() }}" alt="{{ $banner->title ?: 'Banner DMT Print' }}" class="hero-artwork-img" loading="{{ $loop->first ? 'eager' : 'lazy' }}" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='grid';">
+                <div class="hero-art-fallback" style="display:none">
+                    <div class="hero-fallback-brand">
+                        <span class="hero-fallback-mark">d</span>
+                        <b>DMT PRINT</b>
+                        <small>{{ $banner->title ?: 'Digital Printing & Custom Merchandise' }}</small>
+                    </div>
+                </div>
+            @else
+                <div class="hero-art-fallback">
+                    <div class="hero-fallback-brand">
+                        <span class="hero-fallback-mark">d</span>
+                        <b>DMT PRINT</b>
+                        <small>{{ $banner->title ?: 'Digital Printing & Custom Merchandise' }}</small>
+                    </div>
+                </div>
             @endif
         </div>
     </article>

@@ -52,6 +52,23 @@ class ProductMediaPaymentInvoiceTest extends TestCase
         $this->actingAs($admin)->get(route('admin.orders.show', $order))->assertOk()->assertSee('/storage/products/stiker.jpg', false);
     }
 
+    public function test_local_product_image_url_is_relative_to_the_current_site_origin(): void
+    {
+        config(['filesystems.disks.public_uploads.driver' => 'local']);
+        Storage::fake('public_uploads');
+        Storage::disk('public_uploads')->put('products/local-image.jpg', 'local-image-content');
+        $category = Category::factory()->create(['name' => 'Stiker', 'slug' => 'stiker']);
+        Product::factory()->for($category)->create([
+            'name' => 'Stiker Lokal',
+            'slug' => 'stiker-lokal',
+            'image_path' => 'products/local-image.jpg',
+        ]);
+
+        $response = $this->get(route('catalog'));
+
+        $response->assertOk()->assertSee('/storage/products/local-image.jpg', false);
+    }
+
     public function test_upload_disks_are_configured_for_local_development_and_r2_production(): void
     {
         $this->assertSame('public_uploads', UploadDisk::public());
@@ -118,34 +135,6 @@ class ProductMediaPaymentInvoiceTest extends TestCase
         $this->assertStringNotContainsString('dmt-print-public', $url);
     }
 
-    public function test_r2_public_custom_domain_takes_precedence_for_media_urls(): void
-    {
-        config([
-            'filesystems.disks.public_uploads.driver' => 's3',
-            'filesystems.disks.public_uploads.bucket' => 'dmt-print-public',
-            'filesystems.disks.public_uploads.root' => '',
-            'filesystems.disks.public_uploads.url' => 'https://pub-legacy.r2.dev',
-        ]);
-        putenv('PUBLIC_AWS_PUBLIC_URL=https://media.dmtprint.com');
-        $_ENV['PUBLIC_AWS_PUBLIC_URL'] = 'https://media.dmtprint.com';
-        Storage::forgetDisk('public_uploads');
-
-        try {
-            $this->assertSame(
-                'https://media.dmtprint.com/banners/hero.jpg',
-                UploadDisk::publicUrl('banners/hero.jpg'),
-            );
-            $this->assertSame(
-                'https://media.dmtprint.com/products/legacy.jpg',
-                UploadDisk::publicUrl('https://pub-legacy.r2.dev/dmt-print-public/products/legacy.jpg'),
-            );
-        } finally {
-            putenv('PUBLIC_AWS_PUBLIC_URL');
-            unset($_ENV['PUBLIC_AWS_PUBLIC_URL']);
-            Storage::forgetDisk('public_uploads');
-        }
-    }
-
     public function test_filesystems_endpoint_sanitizer_removes_duplicate_bucket_suffix(): void
     {
         $config = require config_path('filesystems.php');
@@ -155,21 +144,31 @@ class ProductMediaPaymentInvoiceTest extends TestCase
 
         $originalEndpoint = getenv('PUBLIC_AWS_ENDPOINT');
         $originalBucket = getenv('PUBLIC_AWS_BUCKET');
+        $originalServerEndpoint = $_SERVER['PUBLIC_AWS_ENDPOINT'] ?? null;
+        $originalServerBucket = $_SERVER['PUBLIC_AWS_BUCKET'] ?? null;
 
         try {
             // Test configuration resolution with duplicate bucket suffix
             putenv('PUBLIC_AWS_ENDPOINT=https://account123.r2.cloudflarestorage.com/dmt-print-public');
             putenv('PUBLIC_AWS_BUCKET=dmt-print-public');
+            $_ENV['PUBLIC_AWS_ENDPOINT'] = 'https://account123.r2.cloudflarestorage.com/dmt-print-public';
+            $_ENV['PUBLIC_AWS_BUCKET'] = 'dmt-print-public';
+            $_SERVER['PUBLIC_AWS_ENDPOINT'] = 'https://account123.r2.cloudflarestorage.com/dmt-print-public';
+            $_SERVER['PUBLIC_AWS_BUCKET'] = 'dmt-print-public';
             $freshConfig = require config_path('filesystems.php');
             $this->assertSame('https://account123.r2.cloudflarestorage.com', $freshConfig['disks']['public_uploads']['endpoint']);
 
             // Test configuration resolution with clean endpoint
             putenv('PUBLIC_AWS_ENDPOINT=https://account123.r2.cloudflarestorage.com');
+            $_ENV['PUBLIC_AWS_ENDPOINT'] = 'https://account123.r2.cloudflarestorage.com';
+            $_SERVER['PUBLIC_AWS_ENDPOINT'] = 'https://account123.r2.cloudflarestorage.com';
             $freshConfig = require config_path('filesystems.php');
             $this->assertSame('https://account123.r2.cloudflarestorage.com', $freshConfig['disks']['public_uploads']['endpoint']);
 
             // Test configuration resolution with trailing slash
             putenv('PUBLIC_AWS_ENDPOINT=https://account123.r2.cloudflarestorage.com/');
+            $_ENV['PUBLIC_AWS_ENDPOINT'] = 'https://account123.r2.cloudflarestorage.com/';
+            $_SERVER['PUBLIC_AWS_ENDPOINT'] = 'https://account123.r2.cloudflarestorage.com/';
             $freshConfig = require config_path('filesystems.php');
             $this->assertSame('https://account123.r2.cloudflarestorage.com', $freshConfig['disks']['public_uploads']['endpoint']);
         } finally {
@@ -181,12 +180,24 @@ class ProductMediaPaymentInvoiceTest extends TestCase
                 unset($_ENV['PUBLIC_AWS_ENDPOINT']);
             }
 
+            if ($originalServerEndpoint !== null) {
+                $_SERVER['PUBLIC_AWS_ENDPOINT'] = $originalServerEndpoint;
+            } else {
+                unset($_SERVER['PUBLIC_AWS_ENDPOINT']);
+            }
+
             if ($originalBucket !== false && $originalBucket !== null) {
                 putenv("PUBLIC_AWS_BUCKET={$originalBucket}");
                 $_ENV['PUBLIC_AWS_BUCKET'] = $originalBucket;
             } else {
                 putenv('PUBLIC_AWS_BUCKET=');
                 unset($_ENV['PUBLIC_AWS_BUCKET']);
+            }
+
+            if ($originalServerBucket !== null) {
+                $_SERVER['PUBLIC_AWS_BUCKET'] = $originalServerBucket;
+            } else {
+                unset($_SERVER['PUBLIC_AWS_BUCKET']);
             }
         }
     }

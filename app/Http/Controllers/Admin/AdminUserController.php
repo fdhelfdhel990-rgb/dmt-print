@@ -48,11 +48,12 @@ class AdminUserController extends Controller
     public function destroy(User $user): RedirectResponse
     {
         if ($user->id === auth()->id()) {
-            return back()->withErrors(['admin' => 'Akun yang sedang digunakan tidak dapat dinonaktifkan.']);
+            return back()->withErrors(['admin' => 'Akun yang sedang digunakan tidak dapat dihapus.']);
         }
 
-        $user->update(['is_active' => false]);
+        $name = $user->name;
+        $user->delete();
 
-        return back()->with('status', 'Admin dinonaktifkan.');
+        return back()->with('status', 'Admin '.$name.' berhasil dihapus.');
     }
 }

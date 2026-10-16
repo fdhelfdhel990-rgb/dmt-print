@@ -96,15 +96,6 @@ class UploadDisk
         $raw = trim((string) $path);
 
         if (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://')) {
-            $parsedUrl = parse_url($raw);
-            $absolutePath = is_array($parsedUrl) ? ($parsedUrl['path'] ?? '') : '';
-            $cleanedPath = self::cleanPath($absolutePath, self::resolve($disk, self::public()));
-            $configuredPublicUrl = env('PUBLIC_AWS_PUBLIC_URL');
-
-            if (filled($configuredPublicUrl) && filled($cleanedPath)) {
-                return rtrim((string) $configuredPublicUrl, '/').'/'.$cleanedPath;
-            }
-
             $cleanedUrl = preg_replace('#^(https?://[^/]+)/(?:dmt-print-public/)+(.*)$#i', '$1/$2', $raw);
 
             return $cleanedUrl ?: $placeholder;
@@ -124,7 +115,12 @@ class UploadDisk
 
         $diskConfig = config("filesystems.disks.{$resolvedDisk}", []);
         $driver = $diskConfig['driver'] ?? 'local';
-        $configuredUrl = env('PUBLIC_AWS_PUBLIC_URL') ?? $diskConfig['url'] ?? env('PUBLIC_AWS_URL') ?? env('AWS_URL');
+
+        if ($driver === 'local') {
+            return '/storage/'.$cleaned;
+        }
+
+        $configuredUrl = $diskConfig['url'] ?? env('PUBLIC_AWS_URL') ?? env('AWS_URL');
 
         if (filled($configuredUrl)) {
             $base = rtrim((string) $configuredUrl, '/');
@@ -144,12 +140,6 @@ class UploadDisk
             }
 
             return $base.'/'.$cleaned;
-        }
-
-        if ($driver === 'local') {
-            $appUrl = rtrim(config('app.url', env('APP_URL', 'http://localhost')), '/');
-
-            return $appUrl.'/storage/'.$cleaned;
         }
 
         try {

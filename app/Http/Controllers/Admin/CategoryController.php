@@ -72,6 +72,22 @@ class CategoryController extends Controller
         return back()->with('status', 'Status kategori diperbarui.');
     }
 
+    public function destroy(Category $category): RedirectResponse
+    {
+        if ($category->products()->exists()) {
+            return back()->withErrors(['category' => 'Kategori '.$category->name.' tidak dapat dihapus karena masih memiliki produk terkait. Hapus atau pindahkan produk terlebih dahulu.']);
+        }
+
+        if ($category->image_path) {
+            Storage::disk(UploadDisk::public())->delete($category->image_path);
+        }
+
+        $name = $category->name;
+        $category->delete();
+
+        return redirect()->route('admin.categories')->with('status', 'Kategori '.$name.' berhasil dihapus permanen.');
+    }
+
     /**
      * @return array<string, mixed>
      */

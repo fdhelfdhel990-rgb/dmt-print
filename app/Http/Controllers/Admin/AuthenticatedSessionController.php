@@ -19,6 +19,7 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $credentials = $request->safe()->only(['email', 'password']);
+        $credentials['email'] = strtolower(trim((string) $credentials['email']));
         $credentials['is_admin'] = true;
         $credentials['is_active'] = true;
 
@@ -29,7 +30,12 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
         $request->user()->update(['last_login_at' => now()]);
 
-        return redirect()->intended(route('admin.dashboard'));
+        $intended = $request->session()->pull('url.intended');
+        if ($intended && ! str_contains($intended, '/home') && $intended !== route('admin.login')) {
+            return redirect()->to($intended);
+        }
+
+        return redirect()->route('admin.dashboard');
     }
 
     public function destroy(Request $request): RedirectResponse

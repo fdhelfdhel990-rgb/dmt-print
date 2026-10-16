@@ -50,9 +50,9 @@ class CashbookController extends Controller
     public function destroy(CashbookEntry $entry): RedirectResponse
     {
         abort_unless($entry->source === 'manual', 403);
-        $entry->update(['archived_at' => now()]);
+        $entry->delete();
 
-        return back()->with('status', 'Transaksi kas diarsipkan.');
+        return back()->with('status', 'Transaksi kas berhasil dihapus permanen.');
     }
 
     public function export(Request $request): StreamedResponse

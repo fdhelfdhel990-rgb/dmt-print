@@ -44,9 +44,13 @@ class BannerController extends Controller
 
     public function destroy(Banner $banner): RedirectResponse
     {
-        $banner->update(['archived_at' => now(), 'is_active' => false]);
+        if ($banner->image_path) {
+            Storage::disk(UploadDisk::public())->delete($banner->image_path);
+        }
 
-        return back()->with('status', 'Banner diarsipkan.');
+        $banner->delete();
+
+        return back()->with('status', 'Banner berhasil dihapus permanen.');
     }
 
     /**

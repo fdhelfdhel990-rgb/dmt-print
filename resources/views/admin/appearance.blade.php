@@ -79,10 +79,10 @@
                             </div>
                         </div>
                     </form>
-                    <form method="POST" action="{{ route('admin.banners.destroy', $banner) }}" class="banner-delete-form" onsubmit="return confirm('Arsipkan banner ini?')">
+                    <form method="POST" action="{{ route('admin.banners.destroy', $banner) }}" class="banner-delete-form" onsubmit="return confirm('Hapus banner ini secara permanen beserta file gambarnya?')">
                         @csrf
                         @method('DELETE')
-                        <button class="table-link danger-link">Arsipkan Banner</button>
+                        <button class="table-link danger-link">Hapus Banner</button>
                     </form>
                 </div>
             </article>

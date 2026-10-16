@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
         $middleware->alias(['admin' => EnsureUserIsAdmin::class]);
         $middleware->redirectGuestsTo(fn (Request $request): string => route('admin.login'));
+        $middleware->redirectUsersTo(fn (Request $request): string => route('admin.dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

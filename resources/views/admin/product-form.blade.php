@@ -16,4 +16,15 @@
     </div>
     <aside><section class="admin-card"><h2>Gambar Produk</h2><div class="product-form-preview"><x-product-image :model="$product" :alt="$product->name ?: 'Gambar produk'" /></div><div class="form-group"><label>Ganti gambar</label><input name="image" type="file" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG, WebP maks. 4 MB</small></div>@if($product->image_path)<label><input name="remove_image" value="1" type="checkbox"> Hapus gambar</label>@endif</section><section class="admin-card"><h2>Status</h2><label class="switch-row"><span><b>Produk aktif</b><small>Tampil pada katalog customer</small></span><input name="is_active" value="1" type="checkbox" @checked(old('is_active',$product->is_active ?? true))></label><label class="switch-row"><span><b>Produk unggulan</b><small>Tampil pada beranda</small></span><input name="is_featured" value="1" type="checkbox" @checked(old('is_featured',$product->is_featured))></label></section>@if($errors->any())<section class="admin-card"><h2>Periksa Input</h2><p>{{ $errors->first() }}</p></section>@endif<button class="button button-primary button-block">Simpan Produk</button></aside>
 </form>
+@if($editing)
+<section class="admin-card" style="margin-top:20px;border-top:3px solid #dc2626">
+    <h2>Hapus Produk</h2>
+    <p class="muted" style="font-size:12px;margin:0 0 12px">Hapus produk ini secara permanen dari database dan bersihkan file gambar dari storage/cloud.</p>
+    <form method="POST" action="{{ route('admin.products.destroy',$product) }}" onsubmit="return confirm('PERINGATAN: Hapus produk {{ $product->name }} secara permanen beserta file gambarnya?')">
+        @csrf
+        @method('DELETE')
+        <button type="submit" class="button button-block" style="background:#dc2626;color:#fff;border-color:#dc2626">Hapus Produk Permanen</button>
+    </form>
+</section>
+@endif
 @endsection

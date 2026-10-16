@@ -102,14 +102,30 @@ class ProductController extends Controller
         return back()->with('status', 'Produk berhasil diperbarui.');
     }
 
+    public function status(Product $product): RedirectResponse
+    {
+        $product->update(['is_active' => ! $product->is_active]);
+        $statusText = $product->is_active ? 'diaktifkan' : 'dinonaktifkan';
+
+        return back()->with('status', 'Produk '.$product->name.' '.$statusText.'.');
+    }
+
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(Product $product): RedirectResponse
     {
-        $product->update(['is_active' => false]);
+        if ($product->image_path) {
+            Storage::disk(UploadDisk::public())->delete($product->image_path);
+        }
 
-        return redirect()->route('admin.products')->with('status', 'Produk dinonaktifkan.');
+        $product->inventoryMovements()->delete();
+        $product->options()->delete();
+
+        $name = $product->name;
+        $product->delete();
+
+        return redirect()->route('admin.products')->with('status', 'Produk '.$name.' berhasil dihapus permanen.');
     }
 
     /**

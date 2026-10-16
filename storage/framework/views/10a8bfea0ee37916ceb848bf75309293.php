@@ -1,0 +1,31 @@
+<?php $__env->startSection('title','Produk & Stok'); ?>
+<?php $__env->startSection('page-title','Produk & Stok'); ?>
+<?php $__env->startSection('page-description','Kelola katalog, harga dasar, dan ketersediaan bahan.'); ?>
+<?php $__env->startSection('page-action'); ?><a href="<?php echo e(route('admin.products.create')); ?>" class="button button-primary">Tambah Produk</a><?php $__env->stopSection(); ?>
+<?php $__env->startSection('content'); ?>
+<?php echo $__env->make('partials.admin-page-header', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+<?php if(session('status')): ?><section class="admin-card"><?php echo e(session('status')); ?></section><?php endif; ?>
+<div class="admin-tabs"><a class="active" href="<?php echo e(route('admin.products')); ?>">Produk</a><a href="<?php echo e(route('admin.stock')); ?>">Stok Bahan</a><a href="<?php echo e(route('admin.categories')); ?>">Kategori (<?php echo e($categories->count()); ?>)</a></div>
+<section class="admin-card"><form class="filter-bar"><input name="q" value="<?php echo e(request('q')); ?>" placeholder="Cari nama produk"><select name="category_id"><option value="">Semua kategori</option><?php $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($category->id); ?>" <?php if((int) request('category_id') === $category->id): echo 'selected'; endif; ?>><?php echo e($category->name); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?></select><select name="status"><option value="">Semua status</option><option value="active" <?php if(request('status') === 'active'): echo 'selected'; endif; ?>>Aktif</option><option value="inactive" <?php if(request('status') === 'inactive'): echo 'selected'; endif; ?>>Nonaktif</option></select><button class="button button-primary">Terapkan</button></form><div class="table-wrap"><table class="admin-table admin-products-table"><thead><tr><th>Produk</th><th>Kategori</th><th>Harga Mulai</th><th>Min. Order</th><th>Stok</th><th>Status</th><th>Aksi</th></tr></thead><tbody><?php $__empty_1 = true; $__currentLoopData = $products; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?><tr><td><div class="admin-product-cell"><?php if (isset($component)) { $__componentOriginala58dde406db9207f2e2c58e1c4a3d690 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginala58dde406db9207f2e2c58e1c4a3d690 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.product-image','data' => ['model' => $product,'alt' => $product->name,'class' => 'admin-product-thumb']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('product-image'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['model' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($product),'alt' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($product->name),'class' => 'admin-product-thumb']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginala58dde406db9207f2e2c58e1c4a3d690)): ?>
+<?php $attributes = $__attributesOriginala58dde406db9207f2e2c58e1c4a3d690; ?>
+<?php unset($__attributesOriginala58dde406db9207f2e2c58e1c4a3d690); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginala58dde406db9207f2e2c58e1c4a3d690)): ?>
+<?php $component = $__componentOriginala58dde406db9207f2e2c58e1c4a3d690; ?>
+<?php unset($__componentOriginala58dde406db9207f2e2c58e1c4a3d690); ?>
+<?php endif; ?><div class="admin-product-info"><span class="admin-product-name"><?php echo e($product->name); ?></span><?php if($product->sku): ?><small class="admin-product-sku"><?php echo e($product->sku); ?></small><?php endif; ?></div></div></td><td class="admin-category-col"><span class="admin-category-text"><?php echo e($product->category?->name ?? '-'); ?></span></td><td class="admin-price-col">Rp <?php echo e(number_format($product->base_price, 0, ',', '.')); ?></td><td class="admin-min-col"><?php echo e($product->minimum_order); ?> <?php echo e($product->unit); ?></td><td class="admin-stock-col"><b><?php echo e($product->stock_on_hand); ?></b> <?php echo e($product->unit); ?></td><td class="admin-status-col"><span class="status-pill <?php echo e($product->is_active ? 'success' : 'neutral'); ?>"><?php echo e($product->is_active ? 'Aktif' : 'Nonaktif'); ?></span></td><td class="admin-actions-col"><div class="admin-row-actions"><a href="<?php echo e(route('admin.products.edit',$product)); ?>" class="table-link">Edit</a><form method="POST" action="<?php echo e(route('admin.products.status',$product)); ?>"><?php echo csrf_field(); ?> <?php echo method_field('PATCH'); ?><button class="table-link"><?php echo e($product->is_active ? 'Nonaktifkan' : 'Aktifkan'); ?></button></form><form method="POST" action="<?php echo e(route('admin.products.destroy',$product)); ?>" onsubmit="return confirm('Hapus produk <?php echo e($product->name); ?> secara permanen beserta file gambarnya?')"><?php echo csrf_field(); ?> <?php echo method_field('DELETE'); ?><button class="table-link danger-link">Hapus</button></form></div></td></tr><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?><tr><td colspan="7">Belum ada produk.</td></tr><?php endif; ?></tbody></table></div><?php echo e($products->links()); ?></section>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\WEB\Laravel\print\dmt\resources\views/admin/products.blade.php ENDPATH**/ ?>

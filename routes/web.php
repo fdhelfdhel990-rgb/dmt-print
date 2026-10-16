@@ -51,6 +51,8 @@ Route::post('/pesanan/{order}/setujui', [OrderTrackingController::class, 'approv
 Route::post('/pesanan/{order}/revisi', [OrderTrackingController::class, 'revise'])->middleware('throttle:10,1')->name('orders.revise');
 Route::post('/pesanan/{order}/pembayaran', [OrderTrackingController::class, 'payment'])->middleware('throttle:10,1')->name('orders.payment');
 
+Route::get('/login', fn () => redirect()->route('admin.login'));
+Route::get('/admin/login', fn () => redirect()->route('admin.login'));
 Route::get('/admin', [AuthenticatedSessionController::class, 'create'])->middleware('guest')->name('admin.login');
 Route::post('/admin/login', [AuthenticatedSessionController::class, 'store'])->middleware(['guest', 'throttle:6,1'])->name('admin.login.store');
 Route::prefix('admin-preview')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
@@ -69,6 +71,7 @@ Route::prefix('admin-preview')->name('admin.')->middleware(['auth', 'admin'])->g
     Route::post('/pesanan/{order}/produksi', [AdminOrderController::class, 'production'])->name('orders.production');
     Route::post('/pesanan/{order}/arsip', [AdminOrderController::class, 'archive'])->name('orders.archive');
     Route::post('/pesanan/{order}/pulihkan', [AdminOrderController::class, 'restore'])->name('orders.restore');
+    Route::delete('/pesanan/{order}', [AdminOrderController::class, 'destroy'])->name('orders.destroy');
     Route::post('/pembayaran/{payment}/verifikasi', [AdminOrderController::class, 'verifyPayment'])->name('payments.verify');
     Route::post('/pembayaran/{payment}/tolak', [AdminOrderController::class, 'rejectPayment'])->name('payments.reject');
     Route::post('/pembayaran/{payment}/batalkan-verifikasi', [AdminOrderController::class, 'cancelPaymentVerification'])->name('payments.cancel-verification');
@@ -80,6 +83,7 @@ Route::prefix('admin-preview')->name('admin.')->middleware(['auth', 'admin'])->g
     Route::post('/produk', [AdminProductController::class, 'store'])->name('products.store');
     Route::get('/produk/{product}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
     Route::patch('/produk/{product}', [AdminProductController::class, 'update'])->name('products.update');
+    Route::patch('/produk/{product}/status', [AdminProductController::class, 'status'])->name('products.status');
     Route::delete('/produk/{product}', [AdminProductController::class, 'destroy'])->name('products.destroy');
     Route::get('/kategori', [CategoryController::class, 'index'])->name('categories');
     Route::get('/kategori/tambah', [CategoryController::class, 'create'])->name('categories.create');
@@ -87,6 +91,7 @@ Route::prefix('admin-preview')->name('admin.')->middleware(['auth', 'admin'])->g
     Route::get('/kategori/{category}/edit', [CategoryController::class, 'edit'])->name('categories.edit');
     Route::match(['put', 'patch'], '/kategori/{category}', [CategoryController::class, 'update'])->name('categories.update');
     Route::patch('/kategori/{category}/status', [CategoryController::class, 'status'])->name('categories.status');
+    Route::delete('/kategori/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
     Route::get('/stok', fn () => view('admin.stock', [
         'products' => Product::query()->withMax('inventoryMovements', 'created_at')->orderBy('name')->get(),
         'lowStockCount' => Product::query()->whereColumn('stock_on_hand', '<=', 'stock_minimum')->count(),
@@ -116,3 +121,12 @@ Route::prefix('admin-preview')->name('admin.')->middleware(['auth', 'admin'])->g
     Route::patch('/pengaturan/admin/{user}', [AdminUserController::class, 'update'])->name('admins.update');
     Route::delete('/pengaturan/admin/{user}', [AdminUserController::class, 'destroy'])->name('admins.destroy');
 });
+
+Route::get('/admin/dashboard', fn () => redirect()->route('admin.dashboard'));
+Route::get('/admin/{path}', function (string $path) {
+    if ($path === 'dashboard') {
+        return redirect()->route('admin.dashboard');
+    }
+
+    return redirect('/admin-preview/'.$path);
+})->where('path', '.*')->middleware(['auth', 'admin']);
