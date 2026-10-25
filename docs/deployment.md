@@ -39,6 +39,8 @@ For R2/S3-compatible storage, set the public and private disk driver to `s3` and
 
 For public R2 media, use `PUBLIC_AWS_ENDPOINT` for the S3 API endpoint and `PUBLIC_AWS_URL` for the bucket's Cloudflare Public Development URL (`https://pub-<hash>.r2.dev`). `PUBLIC_AWS_ENDPOINT` and `PUBLIC_AWS_URL` serve different purposes: the former is for S3 API operations, while the latter is the public image URL.
 
+Some Indonesian ISPs block `*.r2.dev`, so images fail to load for visitors on those networks. Set `PUBLIC_MEDIA_PROXY=true` to serve public media through the app at `/media/...` (streamed from R2 via the S3 API) instead of linking to `r2.dev`. A custom domain attached to the R2 bucket is the alternative.
+
 ## Deployment Commands
 
 ```bash

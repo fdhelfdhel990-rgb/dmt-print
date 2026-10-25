@@ -18,8 +18,10 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\User;
+use App\Support\UploadDisk;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 $categories = ['Merchandise & Souvenir', 'Print Warna', 'Stiker', 'Packaging UMKM', 'Poster', 'Kalender', 'Banner', 'Kartu Nama'];
 $products = [
@@ -130,3 +132,16 @@ Route::get('/admin/{path}', function (string $path) {
 
     return redirect('/admin-preview/'.$path);
 })->where('path', '.*')->middleware(['auth', 'admin']);
+
+Route::get('/media/{path}', function (string $path) {
+    $disk = UploadDisk::public();
+    $cleaned = UploadDisk::cleanPath($path, $disk);
+
+    abort_unless(UploadDisk::isProxyablePublicPath($cleaned), 404);
+
+    $storage = Storage::disk($disk);
+
+    abort_unless($storage->exists($cleaned), 404);
+
+    return $storage->response($cleaned, null, ['Cache-Control' => 'public, max-age=31536000, immutable']);
+})->where('path', '.*')->name('media.show');

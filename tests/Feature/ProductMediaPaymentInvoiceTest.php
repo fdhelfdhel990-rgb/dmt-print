@@ -350,6 +350,29 @@ class ProductMediaPaymentInvoiceTest extends TestCase
         }
     }
 
+    public function test_public_media_can_be_proxied_through_the_application_origin(): void
+    {
+        config([
+            'filesystems.disks.public_uploads.driver' => 's3',
+            'filesystems.disks.public_uploads.url' => 'https://pub-example.r2.dev',
+            'filesystems.uploads.proxy_public' => true,
+        ]);
+
+        $this->assertSame('/media/products/stiker.jpg', UploadDisk::publicUrl('products/stiker.jpg', 'public_uploads'));
+        $this->assertSame('/media/banners/promo.jpg', UploadDisk::publicUrl('dmt-print-public/banners/promo.jpg', 'public_uploads'));
+
+        Storage::fake('public_uploads');
+        Storage::disk('public_uploads')->put('products/stiker.jpg', 'image-content');
+        Storage::disk('public_uploads')->put('secret/notes.txt', 'hidden');
+
+        $this->get('/media/products/stiker.jpg')
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'immutable, max-age=31536000, public');
+        $this->get('/media/products/missing.jpg')->assertNotFound();
+        $this->get('/media/secret/notes.txt')->assertNotFound();
+        $this->get('/media/products/../secret/notes.txt')->assertNotFound();
+    }
+
     public function test_private_media_disks_do_not_produce_public_urls(): void
     {
         $this->assertNull(UploadDisk::publicUrl('order-designs/token/design.pdf', 'private_uploads'));
