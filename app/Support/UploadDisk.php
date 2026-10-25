@@ -35,6 +35,11 @@ class UploadDisk
         return in_array($disk, ['public', self::public()], true);
     }
 
+    public static function isProxyablePublicPath(?string $path): bool
+    {
+        return is_string($path) && preg_match('#^(banners|products|categories|payment-methods)/[A-Za-z0-9._-]+$#', $path) === 1;
+    }
+
     public static function isValidPath(mixed $path): bool
     {
         if (! is_string($path)) {
@@ -118,6 +123,10 @@ class UploadDisk
 
         if ($driver === 'local') {
             return '/storage/'.$cleaned;
+        }
+
+        if (config('filesystems.uploads.proxy_public')) {
+            return '/media/'.$cleaned;
         }
 
         $configuredUrl = $diskConfig['url'] ?? env('PUBLIC_AWS_URL') ?? env('AWS_URL');

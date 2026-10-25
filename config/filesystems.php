@@ -18,6 +18,7 @@ return [
     'uploads' => [
         'public' => env('PUBLIC_UPLOAD_DISK', 'public_uploads'),
         'private' => env('PRIVATE_UPLOAD_DISK', 'private_uploads'),
+        'proxy_public' => (bool) env('PUBLIC_MEDIA_PROXY', false),
     ],
 
     /*
